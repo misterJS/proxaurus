@@ -4,22 +4,20 @@ import IconFacebook from '@/components/icon/icon-facebook';
 import IconGithub from '@/components/icon/icon-github';
 import IconHome from '@/components/icon/icon-home';
 import IconLinkedin from '@/components/icon/icon-linkedin';
-import IconPhone from '@/components/icon/icon-phone';
 import IconTwitter from '@/components/icon/icon-twitter';
-import IconUser from '@/components/icon/icon-user';
 import React, { useState } from 'react';
 
 const ComponentsUsersAccountSettingsTabs = () => {
     const [tabs, setTabs] = useState<string>('home');
-    const toggleTabs = (name: string) => {
-        setTabs(name);
-    };
+    const toggleTabs = (name: string) => setTabs(name);
 
     return (
         <div className="pt-5">
             <div className="mb-5 flex items-center justify-between">
                 <h5 className="text-lg font-semibold dark:text-white-light">Settings</h5>
             </div>
+
+            {/* Tabs */}
             <div>
                 <ul className="mb-5 overflow-y-auto whitespace-nowrap border-b border-[#ebedf2] font-semibold dark:border-[#191e3a] sm:flex">
                     <li className="inline-block">
@@ -40,27 +38,11 @@ const ComponentsUsersAccountSettingsTabs = () => {
                             Payment Details
                         </button>
                     </li>
-                    <li className="inline-block">
-                        <button
-                            onClick={() => toggleTabs('preferences')}
-                            className={`flex gap-2 border-b border-transparent p-4 hover:border-primary hover:text-primary ${tabs === 'preferences' ? '!border-primary text-primary' : ''}`}
-                        >
-                            <IconUser className="h-5 w-5" />
-                            Preferences
-                        </button>
-                    </li>
-                    <li className="inline-block">
-                        <button
-                            onClick={() => toggleTabs('danger-zone')}
-                            className={`flex gap-2 border-b border-transparent p-4 hover:border-primary hover:text-primary ${tabs === 'danger-zone' ? '!border-primary text-primary' : ''}`}
-                        >
-                            <IconPhone />
-                            Danger Zone
-                        </button>
-                    </li>
                 </ul>
             </div>
-            {tabs === 'home' ? (
+
+            {/* HOME */}
+            {tabs === 'home' && (
                 <div>
                     <form className="mb-5 rounded-md border border-[#ebedf2] bg-white p-4 dark:border-[#191e3a] dark:bg-black">
                         <h6 className="mb-5 text-lg font-bold">General Information</h6>
@@ -124,6 +106,7 @@ const ComponentsUsersAccountSettingsTabs = () => {
                             </div>
                         </div>
                     </form>
+
                     <form className="rounded-md border border-[#ebedf2] bg-white p-4 dark:border-[#191e3a] dark:bg-black">
                         <h6 className="mb-5 text-lg font-bold">Social</h6>
                         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
@@ -154,10 +137,10 @@ const ComponentsUsersAccountSettingsTabs = () => {
                         </div>
                     </form>
                 </div>
-            ) : (
-                ''
             )}
-            {tabs === 'payment-details' ? (
+
+            {/* PAYMENT DETAILS */}
+            {tabs === 'payment-details' && (
                 <div>
                     <div className="mb-5 grid grid-cols-1 gap-5 lg:grid-cols-2">
                         <div className="panel">
@@ -205,6 +188,7 @@ const ComponentsUsersAccountSettingsTabs = () => {
                             </div>
                             <button className="btn btn-primary">Add Address</button>
                         </div>
+
                         <div className="panel">
                             <div className="mb-5">
                                 <h5 className="mb-4 text-lg font-semibold">Payment History</h5>
@@ -260,6 +244,7 @@ const ComponentsUsersAccountSettingsTabs = () => {
                             <button className="btn btn-primary">Add Payment Method</button>
                         </div>
                     </div>
+
                     <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
                         <div className="panel">
                             <div className="mb-5">
@@ -307,6 +292,7 @@ const ComponentsUsersAccountSettingsTabs = () => {
                                 </form>
                             </div>
                         </div>
+
                         <div className="panel">
                             <div className="mb-5">
                                 <h5 className="mb-4 text-lg font-semibold">Add Payment Method</h5>
@@ -356,131 +342,6 @@ const ComponentsUsersAccountSettingsTabs = () => {
                         </div>
                     </div>
                 </div>
-            ) : (
-                ''
-            )}
-            {tabs === 'preferences' ? (
-                <div className="switch">
-                    <div className="mb-5 grid grid-cols-1 gap-5 lg:grid-cols-2">
-                        <div className="panel space-y-5">
-                            <h5 className="mb-4 text-lg font-semibold">Choose Theme</h5>
-                            <div className="flex justify-around">
-                                <div className="flex">
-                                    <label className="inline-flex cursor-pointer">
-                                        <input className="form-radio cursor-pointer ltr:mr-4 rtl:ml-4" type="radio" name="flexRadioDefault" defaultChecked />
-                                        <span>
-                                            <img className="ms-3" width="100" height="68" alt="settings-dark" src="/assets/images/settings-light.svg" />
-                                        </span>
-                                    </label>
-                                </div>
-
-                                <label className="inline-flex cursor-pointer">
-                                    <input className="form-radio cursor-pointer ltr:mr-4 rtl:ml-4" type="radio" name="flexRadioDefault" />
-                                    <span>
-                                        <img className="ms-3" width="100" height="68" alt="settings-light" src="/assets/images/settings-dark.svg" />
-                                    </span>
-                                </label>
-                            </div>
-                        </div>
-                        <div className="panel space-y-5">
-                            <h5 className="mb-4 text-lg font-semibold">Activity data</h5>
-                            <p>Download your Summary, Task and Payment History Data</p>
-                            <button type="button" className="btn btn-primary">
-                                Download Data
-                            </button>
-                        </div>
-                    </div>
-                    <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
-                        <div className="panel space-y-5">
-                            <h5 className="mb-4 text-lg font-semibold">Public Profile</h5>
-                            <p>
-                                Your <span className="text-primary">Profile</span> will be visible to anyone on the network.
-                            </p>
-                            <label className="relative h-6 w-12">
-                                <input type="checkbox" className="custom_switch peer absolute z-10 h-full w-full cursor-pointer opacity-0" id="custom_switch_checkbox1" />
-                                <span className="block h-full rounded-full bg-[#ebedf2] before:absolute before:bottom-1 before:left-1 before:h-4 before:w-4 before:rounded-full before:bg-white before:transition-all before:duration-300 peer-checked:bg-primary peer-checked:before:left-7 dark:bg-dark dark:before:bg-white-dark dark:peer-checked:before:bg-white"></span>
-                            </label>
-                        </div>
-                        <div className="panel space-y-5">
-                            <h5 className="mb-4 text-lg font-semibold">Show my email</h5>
-                            <p>
-                                Your <span className="text-primary">Email</span> will be visible to anyone on the network.
-                            </p>
-                            <label className="relative h-6 w-12">
-                                <input type="checkbox" className="custom_switch peer absolute z-10 h-full w-full cursor-pointer opacity-0" id="custom_switch_checkbox2" />
-                                <span className="block h-full rounded-full bg-[#ebedf2] before:absolute before:bottom-1 before:left-1 before:h-4  before:w-4 before:rounded-full before:bg-white before:transition-all before:duration-300 peer-checked:bg-primary peer-checked:before:left-7 dark:bg-dark dark:before:bg-white-dark dark:peer-checked:before:bg-white"></span>
-                            </label>
-                        </div>
-                        <div className="panel space-y-5">
-                            <h5 className="mb-4 text-lg font-semibold">Enable keyboard shortcuts</h5>
-                            <p>
-                                When enabled, press <span className="text-primary">ctrl</span> for help
-                            </p>
-                            <label className="relative h-6 w-12">
-                                <input type="checkbox" className="custom_switch peer absolute z-10 h-full w-full cursor-pointer opacity-0" id="custom_switch_checkbox3" />
-                                <span className="block h-full rounded-full bg-[#ebedf2] before:absolute before:bottom-1 before:left-1 before:h-4  before:w-4 before:rounded-full before:bg-white before:transition-all before:duration-300 peer-checked:bg-primary peer-checked:before:left-7 dark:bg-dark dark:before:bg-white-dark dark:peer-checked:before:bg-white"></span>
-                            </label>
-                        </div>
-                        <div className="panel space-y-5">
-                            <h5 className="mb-4 text-lg font-semibold">Hide left navigation</h5>
-                            <p>
-                                Sidebar will be <span className="text-primary">hidden</span> by default
-                            </p>
-                            <label className="relative h-6 w-12">
-                                <input type="checkbox" className="custom_switch peer absolute z-10 h-full w-full cursor-pointer opacity-0" id="custom_switch_checkbox4" />
-                                <span className="block h-full rounded-full bg-[#ebedf2] before:absolute before:bottom-1 before:left-1 before:h-4  before:w-4 before:rounded-full before:bg-white before:transition-all before:duration-300 peer-checked:bg-primary peer-checked:before:left-7 dark:bg-dark dark:before:bg-white-dark dark:peer-checked:before:bg-white"></span>
-                            </label>
-                        </div>
-                        <div className="panel space-y-5">
-                            <h5 className="mb-4 text-lg font-semibold">Advertisements</h5>
-                            <p>
-                                Display <span className="text-primary">Ads</span> on your dashboard
-                            </p>
-                            <label className="relative h-6 w-12">
-                                <input type="checkbox" className="custom_switch peer absolute z-10 h-full w-full cursor-pointer opacity-0" id="custom_switch_checkbox5" />
-                                <span className="block h-full rounded-full bg-[#ebedf2] before:absolute before:bottom-1 before:left-1 before:h-4  before:w-4 before:rounded-full before:bg-white before:transition-all before:duration-300 peer-checked:bg-primary peer-checked:before:left-7 dark:bg-dark dark:before:bg-white-dark dark:peer-checked:before:bg-white"></span>
-                            </label>
-                        </div>
-                        <div className="panel space-y-5">
-                            <h5 className="mb-4 text-lg font-semibold">Social Profile</h5>
-                            <p>
-                                Enable your <span className="text-primary">social</span> profiles on this network
-                            </p>
-                            <label className="relative h-6 w-12">
-                                <input type="checkbox" className="custom_switch peer absolute z-10 h-full w-full cursor-pointer opacity-0" id="custom_switch_checkbox6" />
-                                <span className="block h-full rounded-full bg-[#ebedf2] before:absolute before:bottom-1 before:left-1 before:h-4  before:w-4 before:rounded-full before:bg-white before:transition-all before:duration-300 peer-checked:bg-primary peer-checked:before:left-7 dark:bg-dark dark:before:bg-white-dark dark:peer-checked:before:bg-white"></span>
-                            </label>
-                        </div>
-                    </div>
-                </div>
-            ) : (
-                ''
-            )}
-            {tabs === 'danger-zone' ? (
-                <div className="switch">
-                    <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
-                        <div className="panel space-y-5">
-                            <h5 className="mb-4 text-lg font-semibold">Purge Cache</h5>
-                            <p>Remove the active resource from the cache without waiting for the predetermined cache expiry time.</p>
-                            <button className="btn btn-secondary">Clear</button>
-                        </div>
-                        <div className="panel space-y-5">
-                            <h5 className="mb-4 text-lg font-semibold">Deactivate Account</h5>
-                            <p>You will not be able to receive messages, notifications for up to 24 hours.</p>
-                            <label className="relative h-6 w-12">
-                                <input type="checkbox" className="custom_switch peer absolute z-10 h-full w-full cursor-pointer opacity-0" id="custom_switch_checkbox7" />
-                                <span className="block h-full rounded-full bg-[#ebedf2] before:absolute before:bottom-1 before:left-1 before:h-4 before:w-4 before:rounded-full before:bg-white before:transition-all before:duration-300 peer-checked:bg-primary peer-checked:before:left-7 dark:bg-dark dark:before:bg-white-dark dark:peer-checked:before:bg-white"></span>
-                            </label>
-                        </div>
-                        <div className="panel space-y-5">
-                            <h5 className="mb-4 text-lg font-semibold">Delete Account</h5>
-                            <p>Once you delete the account, there is no going back. Please be certain.</p>
-                            <button className="btn btn-danger btn-delete-account">Delete my account</button>
-                        </div>
-                    </div>
-                </div>
-            ) : (
-                ''
             )}
         </div>
     );
