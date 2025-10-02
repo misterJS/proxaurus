@@ -1,4 +1,4 @@
-{
+﻿{
     "dashboard": "Pannello di controllo",
     "sales": "Saldi",
     "analytics": "Analisi",
@@ -19,7 +19,7 @@
     "starter_kit": "Kit di partenza",
     "documentation": "Documentazione",
     "ui_kit": "Kit interfaccia utente",
-    "more": "Di più",
+    "more": "Di piÃ¹",
     "finance": "Finanza",
     "crypto": "Cripto",
     "chat": "Chiacchierare",
@@ -27,6 +27,7 @@
     "todo_list": "lista di cose da fare",
     "notes": "Nota",
     "scrumboard": "mischia",
+    "task_management": "Task Management",
     "contacts": "Contatti",
     "invoice": "fattura",
     "list": "elenco",
@@ -126,3 +127,4 @@
     "contact_us_boxed": "Contattaci Inscatolato",
     "contact_us_cover": "Contattaci Copertina"
 }
+

@@ -1,4 +1,4 @@
-import ComponentsAuthUnlockForm from '@/components/auth/components-auth-unlock-form';
+﻿import ComponentsAuthUnlockForm from '@/components/auth/components-auth-unlock-form';
 import LanguageDropdown from '@/components/language-dropdown';
 import { Metadata } from 'next';
 import Link from 'next/link';
@@ -50,7 +50,7 @@ const CoverLockScreen = () => {
                             </div>
                             <ComponentsAuthUnlockForm />
                         </div>
-                        <p className="absolute bottom-6 w-full text-center dark:text-white">© {new Date().getFullYear()}.VRISTO All Rights Reserved.</p>
+                        <p className="absolute bottom-6 w-full text-center dark:text-white">&copy; {new Date().getFullYear()}. Proxaurus All Rights Reserved.</p>
                     </div>
                 </div>
             </div>
@@ -59,3 +59,6 @@ const CoverLockScreen = () => {
 };
 
 export default CoverLockScreen;
+
+
+

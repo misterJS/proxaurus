@@ -1,4 +1,4 @@
-import ProviderComponent from '@/components/layouts/provider-component';
+﻿import ProviderComponent from '@/components/layouts/provider-component';
 import 'react-perfect-scrollbar/dist/css/styles.css';
 import '../styles/tailwind.css';
 import { Metadata } from 'next';
@@ -6,8 +6,8 @@ import { Nunito } from 'next/font/google';
 
 export const metadata: Metadata = {
     title: {
-        template: '%s | VRISTO - Multipurpose Tailwind Dashboard Template',
-        default: 'VRISTO - Multipurpose Tailwind Dashboard Template',
+        template: '%s | Proxaurus - Project Management Hub',
+        default: 'Proxaurus - Project Management Hub',
     },
 };
 const nunito = Nunito({
@@ -26,3 +26,4 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         </html>
     );
 }
+

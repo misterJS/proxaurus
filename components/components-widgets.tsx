@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import Dropdown from '@/components/dropdown';
 import IconArrowLeft from '@/components/icon/icon-arrow-left';
 import IconBolt from '@/components/icon/icon-bolt';
@@ -1593,7 +1593,7 @@ const ComponentsWidgets = () => {
                                         <h5 className="font-semibold dark:text-white-light">
                                             New project created :{' '}
                                             <button type="button" className="text-success">
-                                                [VRISTO Admin Template]
+                                                [Proxaurus Admin Template]
                                             </button>
                                         </h5>
                                         <p className="text-xs text-white-dark">27 Feb, 2020</p>
@@ -1933,3 +1933,4 @@ const ComponentsWidgets = () => {
 };
 
 export default ComponentsWidgets;
+

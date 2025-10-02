@@ -1,4 +1,4 @@
-{
+﻿{
     "dashboard": "Dashboard",
     "sales": "Sales",
     "analytics": "Analytics",
@@ -27,6 +27,7 @@
     "todo_list": "Todo List",
     "notes": "Notes",
     "scrumboard": "Scrumboard",
+    "task_management": "Task Management",
     "contacts": "Contacts",
     "invoice": "Invoice",
     "list": "List",
@@ -126,3 +127,4 @@
     "contact_us_boxed": "Contact Us Boxed",
     "contact_us_cover": "Contact Us Cover"
 }
+

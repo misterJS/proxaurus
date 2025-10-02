@@ -1,4 +1,4 @@
-import ComponentsAuthResetPasswordForm from '@/components/auth/components-auth-reset-password-form';
+﻿import ComponentsAuthResetPasswordForm from '@/components/auth/components-auth-reset-password-form';
 import LanguageDropdown from '@/components/language-dropdown';
 import { Metadata } from 'next';
 import Link from 'next/link';
@@ -45,7 +45,7 @@ const CoverPasswordReset = () => {
                             </div>
                             <ComponentsAuthResetPasswordForm />
                         </div>
-                        <p className="absolute bottom-6 w-full text-center dark:text-white">© {new Date().getFullYear()}.VRISTO All Rights Reserved.</p>
+                        <p className="absolute bottom-6 w-full text-center dark:text-white">&copy; {new Date().getFullYear()}. Proxaurus All Rights Reserved.</p>
                     </div>
                 </div>
             </div>
@@ -54,3 +54,6 @@ const CoverPasswordReset = () => {
 };
 
 export default CoverPasswordReset;
+
+
+

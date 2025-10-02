@@ -1,4 +1,4 @@
-import ComponentsPagesComingSoonForm from '@/components/pages/coming-soon/components-pages-coming-soon-form';
+﻿import ComponentsPagesComingSoonForm from '@/components/pages/coming-soon/components-pages-coming-soon-form';
 import { Metadata } from 'next';
 import Link from 'next/link';
 import React from 'react';
@@ -44,7 +44,7 @@ const ComingSoonCover = () => {
                             </div>
                             <ComponentsPagesComingSoonForm />
                         </div>
-                        <p className="absolute bottom-6 w-full text-center dark:text-white">© {new Date().getFullYear()}.VRISTO All Rights Reserved.</p>
+                        <p className="absolute bottom-6 w-full text-center dark:text-white">&copy; {new Date().getFullYear()}. Proxaurus All Rights Reserved.</p>
                     </div>
                 </div>
             </div>
@@ -53,3 +53,6 @@ const ComingSoonCover = () => {
 };
 
 export default ComingSoonCover;
+
+
+

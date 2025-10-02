@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import IconBox from '@/components/icon/icon-box';
 import IconDesktop from '@/components/icon/icon-desktop';
 import IconDollarSignCircle from '@/components/icon/icon-dollar-sign-circle';
@@ -80,7 +80,7 @@ const ComponentsPagesFaqWithTabs = ({ title = 'Some common <span className="text
             ${active1 === 1 ? 'bg-primary-light !text-primary dark:bg-[#1B2E4B]' : ''}`}
                                 onClick={() => setActive1(active1 === 1 ? null : 1)}
                             >
-                                <span>How to install VRISTO Admin</span>
+                                <span>How to install Proxaurus Admin</span>
                                 {active1 !== 1 ? (
                                     <span className="shrink-0">
                                         <IconPlusCircle duotone={false} />
@@ -136,7 +136,7 @@ const ComponentsPagesFaqWithTabs = ({ title = 'Some common <span className="text
             ${active1 === 3 ? 'bg-primary-light !text-primary dark:bg-[#1B2E4B]' : ''}`}
                                 onClick={() => setActive1(active1 === 3 ? null : 3)}
                             >
-                                <span>How to install VRISTO Admin</span>
+                                <span>How to install Proxaurus Admin</span>
                                 {active1 !== 3 ? (
                                     <span className="shrink-0">
                                         <IconPlusCircle duotone={false} />
@@ -164,7 +164,7 @@ const ComponentsPagesFaqWithTabs = ({ title = 'Some common <span className="text
             ${active1 === 5 ? 'bg-primary-light !text-primary dark:bg-[#1B2E4B]' : ''}`}
                                 onClick={() => setActive1(active1 === 5 ? null : 5)}
                             >
-                                <span>How to install VRISTO Admin</span>
+                                <span>How to install Proxaurus Admin</span>
                                 {active1 !== 5 ? (
                                     <span className="shrink-0">
                                         <IconPlusCircle duotone={false} />
@@ -311,3 +311,4 @@ const ComponentsPagesFaqWithTabs = ({ title = 'Some common <span className="text
 };
 
 export default ComponentsPagesFaqWithTabs;
+

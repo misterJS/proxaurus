@@ -1,4 +1,4 @@
-import ComponentsAuthRegisterForm from '@/components/auth/components-auth-register-form';
+﻿import ComponentsAuthRegisterForm from '@/components/auth/components-auth-register-form';
 import IconFacebookCircle from '@/components/icon/icon-facebook-circle';
 import IconGoogle from '@/components/icon/icon-google';
 import IconInstagram from '@/components/icon/icon-instagram';
@@ -100,7 +100,7 @@ const CoverRegister = () => {
                                 </Link>
                             </div>
                         </div>
-                        <p className="absolute bottom-6 w-full text-center dark:text-white">© {new Date().getFullYear()}.VRISTO All Rights Reserved.</p>
+                        <p className="absolute bottom-6 w-full text-center dark:text-white">&copy; {new Date().getFullYear()}. Proxaurus All Rights Reserved.</p>
                     </div>
                 </div>
             </div>
@@ -109,3 +109,6 @@ const CoverRegister = () => {
 };
 
 export default CoverRegister;
+
+
+

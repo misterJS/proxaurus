@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import IconDownload from '@/components/icon/icon-download';
 import IconEye from '@/components/icon/icon-eye';
 import IconSave from '@/components/icon/icon-save';
@@ -64,7 +64,7 @@ const ComponentsAppsInvoiceAdd = () => {
                         </div>
                         <div className="mt-6 space-y-1 text-gray-500 dark:text-gray-400">
                             <div>13 Tetrick Road, Cypress Gardens, Florida, 33884, US</div>
-                            <div>vristo@gmail.com</div>
+                            <div>hello@proxaurus.com</div>
                             <div>+1 (070) 123-4567</div>
                         </div>
                     </div>
@@ -211,7 +211,7 @@ const ComponentsAppsInvoiceAdd = () => {
                                     <option value="Cuba">Cuba</option>
                                     <option value="Cyprus">Cyprus</option>
                                     <option value="Czechia">Czechia</option>
-                                    <option value="Côte">{`Côte d'Ivoire`}</option>
+                                    <option value="CÃ´te">{`CÃ´te d'Ivoire`}</option>
                                     <option value="Djibouti">Djibouti</option>
                                     <option value="Dominica">Dominica</option>
                                     <option value="Dominican">Dominican Republic</option>
@@ -303,7 +303,7 @@ const ComponentsAppsInvoiceAdd = () => {
                                     <option value="Romania">Romania</option>
                                     <option value="Russia">Russia</option>
                                     <option value="Rwanda">Rwanda</option>
-                                    <option value="Réunion">Réunion</option>
+                                    <option value="RÃ©union">RÃ©union</option>
                                     <option value="Samoa">Samoa</option>
                                     <option value="San-Marino">San Marino</option>
                                     <option value="Saudi-Arabia">Saudi Arabia</option>
@@ -325,7 +325,7 @@ const ComponentsAppsInvoiceAdd = () => {
                                     <option value="Swaziland">Swaziland</option>
                                     <option value="Switzerland">Switzerland</option>
                                     <option value="Syria">Syria</option>
-                                    <option value="Sao-Tome-and-Principe">São Tomé &amp; Príncipe</option>
+                                    <option value="Sao-Tome-and-Principe">SÃ£o TomÃ© &amp; PrÃ­ncipe</option>
                                     <option value="Tajikistan">Tajikistan</option>
                                     <option value="Tanzania">Tanzania</option>
                                     <option value="Thailand">Thailand</option>
@@ -511,3 +511,4 @@ const ComponentsAppsInvoiceAdd = () => {
 };
 
 export default ComponentsAppsInvoiceAdd;
+

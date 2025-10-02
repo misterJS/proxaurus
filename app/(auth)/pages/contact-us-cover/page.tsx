@@ -1,4 +1,4 @@
-import LanguageDropdown from '@/components/language-dropdown';
+﻿import LanguageDropdown from '@/components/language-dropdown';
 import ComponentsPagesContactUsForm from '@/components/pages/contact-us/components-pages-contact-us-form';
 import { Metadata } from 'next';
 import Link from 'next/link';
@@ -45,7 +45,7 @@ const ContactUsCover = () => {
                             </div>
                             <ComponentsPagesContactUsForm />
                         </div>
-                        <p className="absolute bottom-6 w-full text-center dark:text-white">© {new Date().getFullYear()}.VRISTO All Rights Reserved.</p>
+                        <p className="absolute bottom-6 w-full text-center dark:text-white">&copy; {new Date().getFullYear()}. Proxaurus All Rights Reserved.</p>
                     </div>
                 </div>
             </div>
@@ -54,3 +54,6 @@ const ContactUsCover = () => {
 };
 
 export default ContactUsCover;
+
+
+
