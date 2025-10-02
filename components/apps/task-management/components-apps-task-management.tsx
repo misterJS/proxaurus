@@ -13,6 +13,26 @@ import { ReactSortable } from 'react-sortablejs';
 import type { IRootState } from '@/store';
 import { uploadPastedImage } from '@/actions/attachment';
 
+const logActivity = async (
+    taskId: string,
+    kind: TaskActivity['kind'],
+    details?: any, // bebas, akan diserialisasi ke jsonb
+) => {
+    const args: Record<string, any> = {
+        p_task_id: taskId,
+        p_kind: kind,
+    };
+    if (details !== undefined && details !== null) {
+        args.p_details = details; // biarin fungsi di DB yg default-in kalau kosong
+    }
+
+    const { error } = await supabase.rpc('log_task_activity', args);
+    if (error) {
+        // lempar ke caller biar bisa ditangani (setError / toast)
+        throw error;
+    }
+};
+
 const formatDue = (iso: string | null) => {
     if (!iso) return { formatted: 'Tidak ada due date', helper: '', overdue: false };
     const due = new Date(iso);
@@ -48,7 +68,15 @@ type Member = {
     fullName: string | null;
     email: string | null;
     avatarUrl: string | null;
-    role?: ProjectRole; // saat ditampilkan di modal members
+    role?: ProjectRole;
+};
+
+type TaskActivity = {
+    id: string;
+    kind: 'title_changed' | 'description_changed' | 'due_changed' | 'timer_started' | 'timer_stopped' | 'assignee_added' | 'assignee_removed' | 'reordered';
+    details: any;
+    created_at: string;
+    actor?: { id: string; full_name?: string } | null;
 };
 
 type BoardTask = {
@@ -61,7 +89,8 @@ type BoardTask = {
     dueDate: string | null;
     trackedSeconds: number;
     createdAt: string;
-    assignees: Member[]; // NEW
+    assignees: Member[];
+    position: number;
 };
 
 type BoardFlow = {
@@ -123,10 +152,12 @@ const ComponentsAppsTaskManagement = () => {
 
     const [myRoles, setMyRoles] = useState<Record<string, ProjectRole>>({});
 
-    // === state untuk EDIT TASK ===
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [editTaskId, setEditTaskId] = useState<string | null>(null);
     const [editForm, setEditForm] = useState<TaskFormState>(initialTaskForm);
+
+    const [activities, setActivities] = useState<TaskActivity[]>([]);
+    const [isActLoading, setIsActLoading] = useState(false);
 
     const activeProject = useMemo(() => projects.find((project) => project.id === activeProjectId) ?? null, [projects, activeProjectId]);
     const columns = activeProject?.flows ?? [];
@@ -174,17 +205,35 @@ const ComponentsAppsTaskManagement = () => {
         return usersById;
     };
 
+    const loadActivities = async (taskId: string) => {
+        setIsActLoading(true);
+        const { data, error } = await supabase
+            .from('task_activities')
+            .select(
+                `
+    id, kind, details, created_at,
+    actor:profiles!task_activities_actor_id_fkey ( id, full_name, avatar_url )
+  `,
+            )
+            .eq('task_id', taskId)
+            .order('created_at', { ascending: false })
+            .limit(100);
+
+        if (!error) setActivities((data as any) || []);
+        setIsActLoading(false);
+    };
+
     const loadProjects = async (ownerId: string, preferredProject?: string) => {
         const { data, error: fetchError } = await supabase
             .from('projects')
             .select(
                 `
-        id, name,
-        flows (
-          id, name, position,
-          tasks ( id, project_id, flow_id, title, description, priority, due_date, tracked_seconds, created_at )
-        )
-      `,
+                id, name,
+                flows (
+                id, name, position,
+                tasks ( id, project_id, flow_id, title, description, priority, due_date, tracked_seconds, created_at, position )
+                )
+            `,
             )
             .order('created_at', { ascending: true });
 
@@ -214,9 +263,15 @@ const ComponentsAppsTaskManagement = () => {
                                         dueDate: task.due_date,
                                         trackedSeconds: task.tracked_seconds ?? 0,
                                         createdAt: task.created_at,
-                                        assignees: [], // <- diisi setelah fetch
+                                        assignees: [],
+                                        position: task.position ?? 999999,
                                     }))
-                                    .sort((a: BoardTask, b: BoardTask) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                                    .sort((a: BoardTask, b: BoardTask) => {
+                                        const pa = a.position ?? 999999;
+                                        const pb = b.position ?? 999999;
+                                        if (pa !== pb) return pa - pb;
+                                        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+                                    })
                               : [],
                       }))
                       .sort((a: BoardFlow, b: BoardFlow) => a.position - b.position)
@@ -414,6 +469,7 @@ const ComponentsAppsTaskManagement = () => {
                 trackedSeconds: data.tracked_seconds ?? 0,
                 createdAt: data.created_at,
                 assignees: [],
+                position: (activeProject.flows.find((f) => f.id === activeColumnId)?.tasks.length ?? 0) + 1,
             };
 
             setProjects((prev) =>
@@ -451,44 +507,75 @@ const ComponentsAppsTaskManagement = () => {
     const toggleTimer = (taskId: string) => {
         if (timer.taskId === taskId) {
             const elapsedSeconds = Math.max(0, Math.floor((Date.now() - timer.startedAt) / 1000));
-            const nextSeconds = timer.initialSeconds + elapsedSeconds;
-            updateTaskInState(taskId, (task) => ({ ...task, trackedSeconds: nextSeconds }));
-            startMutate(async () => {
-                await supabase.from('tasks').update({ tracked_seconds: nextSeconds }).eq('id', taskId);
-            });
+            const optimistic = timer.initialSeconds + elapsedSeconds;
+
+            updateTaskInState(taskId, (t) => ({ ...t, trackedSeconds: optimistic }));
             setTimer({ taskId: null, startedAt: 0, initialSeconds: 0 });
+
+            startMutate(async () => {
+                const { error } = await supabase.rpc('task_timer_stop', { p_task_id: taskId });
+                if (error) {
+                    setError(error.message);
+                    const { data } = await supabase.from('tasks').select('id, tracked_seconds').eq('id', taskId).single();
+                    if (data) {
+                        updateTaskInState(taskId, (t) => ({ ...t, trackedSeconds: data.tracked_seconds ?? t.trackedSeconds }));
+                    }
+                } else {
+                    const { data } = await supabase.from('tasks').select('id, tracked_seconds').eq('id', taskId).single();
+                    if (data) {
+                        updateTaskInState(taskId, (t) => ({ ...t, trackedSeconds: data.tracked_seconds ?? optimistic }));
+                    }
+                }
+            });
+
             return;
         }
-        const task = projects.flatMap((project) => project.flows.flatMap((flow) => flow.tasks)).find((item) => item.id === taskId);
+
+        const task = projects.flatMap((p) => p.flows.flatMap((f) => f.tasks)).find((t) => t.id === taskId);
         if (!task) return;
+
         setTimer({ taskId, startedAt: Date.now(), initialSeconds: task.trackedSeconds });
+
+        startMutate(async () => {
+            const { error } = await supabase.rpc('task_timer_start', { p_task_id: taskId });
+            if (error) {
+                setError(error.message);
+                setTimer({ taskId: null, startedAt: 0, initialSeconds: 0 });
+            }
+        });
     };
 
     const handleTaskSort = (flowId: string, nextTasks: BoardTask[]) => {
-        if (!userId || !activeProject) return;
+        if (!activeProject) return;
+
+        const prev = projects.find((p) => p.id === activeProject.id)?.flows.find((f) => f.id === flowId)?.tasks;
+
+        const nextIndexById = new Map(nextTasks.map((t, i) => [t.id, i + 1]));
+        const prevIndexById = new Map(prev?.map((t, i) => [t.id, t.position || i + 1]));
 
         setProjects((prev) =>
-            prev.map((project) => ({
-                ...project,
-                flows: project.flows.map((flow) => (flow.id === flowId ? { ...flow, tasks: nextTasks.map((task) => ({ ...task, flowId })) } : flow)),
+            prev.map((p) => ({
+                ...p,
+                flows: p.flows.map((f) => (f.id === flowId ? { ...f, tasks: nextTasks.map((t, i) => ({ ...t, flowId, position: i + 1 })) } : f)),
             })),
         );
 
-        const changedTasks = nextTasks.filter((task) => task.flowId !== flowId);
-        if (!changedTasks.length) return;
+        const ids = nextTasks.map((t) => t.id);
 
         startMutate(async () => {
-            const { error } = await supabase
-                .from('tasks')
-                .update({ flow_id: flowId })
-                .in(
-                    'id',
-                    changedTasks.map((task) => task.id),
-                );
-
-            if (error) {
+            const { error } = await supabase.rpc('reorder_tasks', { p_flow_id: flowId, p_task_ids: ids });
+            if (error && userId && activeProject) {
                 setError(error.message);
-                await loadProjects(userId, activeProject.id); // rollback UI jika gagal
+                await loadProjects(userId, activeProject.id);
+                return;
+            }
+
+            for (const t of nextTasks) {
+                const from = prevIndexById.get(t.id);
+                const to = nextIndexById.get(t.id);
+                if (from && to && from !== to) {
+                    await logActivity(t.id, 'reordered', { from, to, flow_id: flowId });
+                }
             }
         });
     };
@@ -516,6 +603,7 @@ const ComponentsAppsTaskManagement = () => {
             priority: task.priority,
         });
         setIsEditModalOpen(true);
+        loadActivities(task.id);
     };
 
     // ====== EDIT TASK (submit) ======
@@ -529,20 +617,33 @@ const ComponentsAppsTaskManagement = () => {
             due_date: editForm.dueDate || null,
         };
         startMutate(async () => {
+            const before = projects // snapshot nilai lama
+                .flatMap((p) => p.flows.flatMap((f) => f.tasks))
+                .find((t) => t.id === editTaskId);
+
             const { data, error: updErr } = await supabase.from('tasks').update(payload).eq('id', editTaskId).select('id, title, description, priority, due_date').single();
+
             if (updErr) {
                 setError(updErr.message);
                 return;
             }
-            updateTaskInState(editTaskId, (t) => ({
-                ...t,
-                title: data.title,
-                description: data.description,
-                priority: normalizePriority(data.priority),
-                dueDate: data.due_date,
-            }));
-            setIsEditModalOpen(false);
-            setEditTaskId(null);
+
+            // log per field yang berubah
+            if (before) {
+                if ((before.title || '') !== (data.title || '')) {
+                    await logActivity(editTaskId, 'title_changed', { old: before.title, new: data.title });
+                }
+                if ((before.description || '') !== (data.description || '')) {
+                    await logActivity(editTaskId, 'description_changed', { old: !!before.description, new: !!data.description });
+                }
+                const oldDue = before.dueDate || null;
+                const newDue = data.due_date || null;
+                if (oldDue !== newDue) {
+                    await logActivity(editTaskId, 'due_changed', { old: oldDue, new: newDue });
+                }
+            }
+
+            // update state UI...
         });
     };
 
@@ -559,15 +660,13 @@ const ComponentsAppsTaskManagement = () => {
         startMutate(async () => {
             if (assigned) {
                 const { error } = await supabase.from('task_assignees').delete().eq('task_id', task.id).eq('user_id', member.userId);
-                if (error && userId && activeProject) {
-                    setError(error.message);
-                    await loadProjects(userId, activeProject.id);
+                if (!error) {
+                    await logActivity(task.id, 'assignee_removed', { assignee_id: member.userId, assignee_email: member.email });
                 }
             } else {
                 const { error } = await supabase.from('task_assignees').insert({ task_id: task.id, user_id: member.userId });
-                if (error && userId && activeProject) {
-                    setError(error.message);
-                    await loadProjects(userId, activeProject.id);
+                if (!error) {
+                    await logActivity(task.id, 'assignee_added', { assignee_id: member.userId, assignee_email: member.email });
                 }
             }
         });
@@ -791,6 +890,63 @@ const ComponentsAppsTaskManagement = () => {
                 setError(err.message || 'Gagal upload gambar yang di-paste.');
             }
         };
+
+    const formatKind = (k: TaskActivity['kind']) => {
+        switch (k) {
+            case 'title_changed':
+                return 'Title changed';
+            case 'description_changed':
+                return 'Description changed';
+            case 'due_changed':
+                return 'Deadline changed';
+            case 'timer_started':
+                return 'Timer started';
+            case 'timer_stopped':
+                return 'Timer stopped';
+            case 'assignee_added':
+                return 'Assignee added';
+            case 'assignee_removed':
+                return 'Assignee removed';
+            case 'reordered':
+                return 'Task reordered';
+            default:
+                return k;
+        }
+    };
+
+    const renderActivityDetails = (k: TaskActivity['kind'], d: any) => {
+        try {
+            // d bisa stringified JSON dari trigger; coba parse aman
+            const details = typeof d === 'string' ? JSON.parse(d) : d;
+
+            if (k === 'title_changed')
+                return (
+                    <span>
+                        {details?.old} → <b>{details?.new}</b>
+                    </span>
+                );
+            if (k === 'description_changed') return <span>deskripsi diperbarui</span>;
+            if (k === 'due_changed')
+                return (
+                    <span>
+                        {details?.old || '—'} → <b>{details?.new || '—'}</b>
+                    </span>
+                );
+            if (k === 'timer_started') return <span>mulai pada {new Date(details?.started_at || Date.now()).toLocaleTimeString()}</span>;
+            if (k === 'timer_stopped') return <span>+{Math.round((details?.delta_seconds || 0) / 60)} menit</span>;
+            if (k === 'assignee_added') return <span>+ {details?.assignee_email || details?.assignee_id}</span>;
+            if (k === 'assignee_removed') return <span>− {details?.assignee_email || details?.assignee_id}</span>;
+            if (k === 'reordered')
+                return (
+                    <span>
+                        posisi: {details?.from} → <b>{details?.to}</b>
+                    </span>
+                );
+            return <span>{JSON.stringify(details)}</span>;
+        } catch {
+            return <span>{String(d)}</span>;
+        }
+    };
 
     return (
         <div className="grid gap-6 lg:grid-cols-[260px_minmax(0,1fr)]">
@@ -1252,6 +1408,37 @@ const ComponentsAppsTaskManagement = () => {
                                 </button>
                             </div>
                         </form>
+
+                        {/* ===== ACTIVITY LOG ===== */}
+                        <div className="m-4 rounded-xl border border-slate-200 dark:border-slate-700">
+                            <div className="flex items-center justify-between border-b border-slate-200 px-4 py-2 dark:border-slate-700">
+                                <h3 className="text-sm font-semibold text-slate-800 dark:text-slate-100">Activity</h3>
+                                <button type="button" onClick={() => editTaskId && loadActivities(editTaskId)} className="text-xs text-slate-500 hover:text-slate-700 dark:text-slate-400">
+                                    Refresh
+                                </button>
+                            </div>
+
+                            <div className="max-h-64 overflow-auto p-3">
+                                {isActLoading ? (
+                                    <p className="text-xs text-slate-400">Loading...</p>
+                                ) : activities.length ? (
+                                    <ul className="space-y-3">
+                                        {activities.map((a) => (
+                                            <li key={a.id} className="rounded-lg bg-slate-50 p-3 text-xs dark:bg-slate-900/40">
+                                                <div className="mb-1 flex items-center justify-between">
+                                                    <span className="font-semibold text-slate-700 dark:text-slate-200">{formatKind(a.kind)}</span>
+                                                    <span className="text-[11px] text-slate-400">{new Date(a.created_at).toLocaleString()}</span>
+                                                </div>
+                                                <div className="text-slate-600 dark:text-slate-300">{renderActivityDetails(a.kind, a.details)}</div>
+                                                <div className="mt-1 text-[11px] text-slate-400">by {a.actor?.full_name || a.actor?.id || 'Unknown'}</div>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                ) : (
+                                    <p className="text-xs text-slate-400">Belum ada activity.</p>
+                                )}
+                            </div>
+                        </div>
                     </div>
                 </div>
             ) : null}
