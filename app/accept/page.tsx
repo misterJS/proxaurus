@@ -20,7 +20,7 @@ export default function AcceptInvitePage() {
       if (error) { setMsg(error.message); return; }
 
       setMsg('Undangan diterima! Membuka project...');
-      router.replace(`/projects/${data.project_id}`);
+      router.replace(`/apps/task-management`);
     };
     run();
   }, [params, router]);
