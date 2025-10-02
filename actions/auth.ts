@@ -50,9 +50,12 @@ export async function signUpAction(_prevState: AuthFormState, formData: FormData
         });
         revalidatePath('/');
         redirect('/');
+
         return { message: 'Akun berhasil dibuat.' };
     }
-
+    if (data) {
+        return { message: 'Cek email kamu untuk konfirmasi.' };
+    }
     return { message: 'Cek email kamu untuk konfirmasi.' };
 }
 
@@ -68,11 +71,12 @@ export async function signInAction(_prevState: AuthFormState, formData: FormData
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
         return { error: error.message };
+    } else {
+        return { message: 'Berhasil masuk.' };
     }
 
     revalidatePath('/');
     redirect('/');
-    return { message: 'Berhasil masuk.' };
 }
 
 export async function signOutAction() {

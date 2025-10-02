@@ -1,11 +1,29 @@
 ﻿'use client';
+import { useEffect } from 'react';
+import Swal from 'sweetalert2';
+
 import IconLockDots from '@/components/icon/icon-lock-dots';
 import IconMail from '@/components/icon/icon-mail';
 import IconUser from '@/components/icon/icon-user';
 import { signUpAction, type AuthFormState } from '@/actions/auth';
 import { useFormState, useFormStatus } from 'react-dom';
 
-const initialState: AuthFormState = {};
+const initialState: AuthFormState = {}; // { message?: string; error?: string }
+
+const showMessage = (msg = '', type: 'success' | 'error' | 'info' | 'warning' = 'success') => {
+  const toast = Swal.mixin({
+    toast: true,
+    position: 'top',
+    showConfirmButton: false,
+    timer: 3000,
+    customClass: { container: 'toast' },
+  });
+  toast.fire({
+    icon: type,
+    title: msg,
+    padding: '10px 20px',
+  });
+};
 
 const SubmitButton = () => {
   const { pending } = useFormStatus();
@@ -23,6 +41,12 @@ const SubmitButton = () => {
 const ComponentsAuthRegisterForm = () => {
   const [state, formAction] = useFormState(signUpAction, initialState);
 
+  useEffect(() => {
+    if (!state) return;
+    if (state.error) showMessage(state.error, 'error');
+    else if (state.message) showMessage(state.message, 'success');
+  }, [state]);
+
   return (
     <form className="space-y-5 dark:text-white" action={formAction}>
       <div>
@@ -37,7 +61,7 @@ const ComponentsAuthRegisterForm = () => {
             className="form-input ps-10 placeholder:text-white-dark"
           />
           <span className="absolute start-4 top-1/2 -translate-y-1/2">
-            <IconUser fill={true} />
+            <IconUser fill />
           </span>
         </div>
       </div>
@@ -54,7 +78,7 @@ const ComponentsAuthRegisterForm = () => {
             className="form-input ps-10 placeholder:text-white-dark"
           />
           <span className="absolute start-4 top-1/2 -translate-y-1/2">
-            <IconMail fill={true} />
+            <IconMail fill />
           </span>
         </div>
       </div>
@@ -71,7 +95,7 @@ const ComponentsAuthRegisterForm = () => {
             className="form-input ps-10 placeholder:text-white-dark"
           />
           <span className="absolute start-4 top-1/2 -translate-y-1/2">
-            <IconLockDots fill={true} />
+            <IconLockDots fill />
           </span>
         </div>
       </div>
@@ -81,16 +105,14 @@ const ComponentsAuthRegisterForm = () => {
           <span className="text-white-dark">Subscribe to weekly newsletter</span>
         </label>
       </div>
-      {state?.error ? (
-        <p className="text-sm font-semibold text-rose-400">{state.error}</p>
-      ) : null}
-      {state?.message ? (
-        <p className="text-sm font-semibold text-emerald-400">{state.message}</p>
-      ) : null}
+
+      {/* optional: tetap render pesan text di bawah form */}
+      {state?.error ? <p className="text-sm font-semibold text-rose-400">{state.error}</p> : null}
+      {state?.message ? <p className="text-sm font-semibold text-emerald-400">{state.message}</p> : null}
+
       <SubmitButton />
     </form>
   );
 };
 
 export default ComponentsAuthRegisterForm;
-

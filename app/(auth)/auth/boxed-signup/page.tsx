@@ -61,7 +61,6 @@ export default async function BoxedSignUpPage() {
                 </p>
               </div>
 
-              {/* form client component yang memanggil supabase.auth.signUp */}
               <ComponentsAuthRegisterForm />
 
               <div className="text-center mt-5 dark:text-white">
