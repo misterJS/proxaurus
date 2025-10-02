@@ -20,6 +20,7 @@ import IconLogout from '@/components/icon/icon-logout';
 import { usePathname, useRouter } from 'next/navigation';
 import { getTranslation } from '@/i18n';
 import { signOutAction } from '@/actions/auth';
+import { supabase } from '@/lib/supabase-browser';
 
 const Header = () => {
     const pathname = usePathname();
@@ -27,6 +28,7 @@ const Header = () => {
     const router = useRouter();
     const { t, i18n } = getTranslation();
     const [isSigningOut, startSignOut] = useTransition();
+    const [userData, setUserData] = useState<any>(null);
 
     useEffect(() => {
         const selector = document.querySelector('ul.horizontal-menu a[href="' + window.location.pathname + '"]');
@@ -54,6 +56,11 @@ const Header = () => {
                 }
             }
         }
+        const run = async () => {
+            const { data: user } = await supabase.auth.getUser();
+            setUserData(user.user);
+        };
+        run();
     }, [pathname]);
 
     const isRtl = useSelector((state: IRootState) => state.themeConfig.rtlClass) === 'rtl';
@@ -224,7 +231,7 @@ const Header = () => {
                         </div>
 
                         {/* Language */}
-                        <div className="dropdown shrink-0">
+                        {/* <div className="dropdown shrink-0">
                             <Dropdown
                                 offset={[0, 8]}
                                 placement={`${isRtl ? 'bottom-start' : 'bottom-end'}`}
@@ -251,10 +258,10 @@ const Header = () => {
                                     })}
                                 </ul>
                             </Dropdown>
-                        </div>
+                        </div> */}
 
                         {/* Inbox */}
-                        <div className="dropdown shrink-0">
+                        {/* <div className="dropdown shrink-0">
                             <Dropdown
                                 offset={[0, 8]}
                                 placement={`${isRtl ? 'bottom-start' : 'bottom-end'}`}
@@ -308,10 +315,10 @@ const Header = () => {
                                     )}
                                 </ul>
                             </Dropdown>
-                        </div>
+                        </div> */}
 
                         {/* Notifications */}
-                        <div className="dropdown shrink-0">
+                        {/* <div className="dropdown shrink-0">
                             <Dropdown
                                 offset={[0, 8]}
                                 placement={`${isRtl ? 'bottom-start' : 'bottom-end'}`}
@@ -384,7 +391,7 @@ const Header = () => {
                                     )}
                                 </ul>
                             </Dropdown>
-                        </div>
+                        </div> */}
 
                         {/* Profile */}
                         <div className="dropdown flex shrink-0">
@@ -394,27 +401,27 @@ const Header = () => {
                                 btnClassName="relative group block"
                                 button={<img className="h-9 w-9 rounded-full object-cover saturate-50 group-hover:saturate-100" src="/assets/images/user-profile.jpeg" alt="userProfile" />}
                             >
-                                <ul className="w-[230px] !py-0 font-semibold text-dark dark:text-white-dark dark:text-white-light/90">
+                                <ul className="w-[260px] !py-0 font-semibold text-dark dark:text-white-dark dark:text-white-light/90">
                                     <li>
                                         <div className="flex items-center px-4 py-4">
                                             <img className="h-10 w-10 rounded-md object-cover" src="/assets/images/user-profile.jpeg" alt="userProfile" />
                                             <div className="truncate ltr:pl-4 rtl:pr-4">
                                                 <h4 className="text-base">
-                                                    John Doe
+                                                    {userData ? userData.user_metadata.full_name : '-'}
                                                     <span className="rounded bg-success-light px-1 text-xs text-success ltr:ml-2 rtl:ml-2">Pro</span>
                                                 </h4>
                                                 <button type="button" className="text-black/60 hover:text-primary dark:text-dark-light/60 dark:hover:text-white">
-                                                    johndoe@gmail.com
+                                                    {userData ? userData.email : '-'}
                                                 </button>
                                             </div>
                                         </div>
                                     </li>
-                                    <li>
+                                    {/* <li>
                                         <Link href="/users/profile" className="dark:hover:text-white">
                                             <IconUser className="h-4.5 w-4.5 shrink-0 ltr:mr-2 rtl:ml-2" />
                                             Profile
                                         </Link>
-                                    </li>
+                                    </li> */}
                                     {/* <li>
                                         <Link href="/apps/mailbox" className="dark:hover:text-white">
                                             <IconMail className="h-4.5 w-4.5 shrink-0 ltr:mr-2 rtl:ml-2" />
