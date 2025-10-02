@@ -395,24 +395,32 @@ const ComponentsAppsTaskManagement = () => {
     };
 
     const handleTaskSort = (flowId: string, nextTasks: BoardTask[]) => {
+        if (!userId || !activeProject) return;
+
         setProjects((prev) =>
             prev.map((project) => ({
                 ...project,
                 flows: project.flows.map((flow) => (flow.id === flowId ? { ...flow, tasks: nextTasks.map((task) => ({ ...task, flowId })) } : flow)),
             })),
         );
+
         const changedTasks = nextTasks.filter((task) => task.flowId !== flowId);
-        if (changedTasks.length) {
-            startMutate(async () => {
-                await supabase
-                    .from('tasks')
-                    .upsert(
-                        changedTasks.map((task) => ({ id: task.id, flow_id: flowId })),
-                        { onConflict: 'id' },
-                    )
-                    .match(() => undefined);
-            });
-        }
+        if (!changedTasks.length) return;
+
+        startMutate(async () => {
+            const { error } = await supabase
+                .from('tasks')
+                .update({ flow_id: flowId })
+                .in(
+                    'id',
+                    changedTasks.map((task) => task.id),
+                );
+
+            if (error) {
+                setError(error.message);
+                await loadProjects(userId, activeProject.id); // rollback UI jika gagal
+            }
+        });
     };
 
     const handleDeleteTask = (taskId: string) => {
