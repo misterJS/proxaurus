@@ -12,6 +12,7 @@ import { supabase } from '@/lib/supabase-browser';
 import { ReactSortable } from 'react-sortablejs';
 import type { IRootState } from '@/store';
 import { uploadPastedImage } from '@/actions/attachment';
+import * as XLSX from 'xlsx';
 
 const logActivity = async (
     taskId: string,
@@ -948,6 +949,69 @@ const ComponentsAppsTaskManagement = () => {
         }
     };
 
+    const fmtDate = (iso?: string | null) => (iso ? new Date(iso).toISOString().slice(0, 10) : '');
+
+    const exportTimesheetXLSX = () => {
+        if (!activeProject) return;
+
+        const project = activeProject;
+
+        const rowsTasks = project.flows.flatMap((flow) =>
+            flow.tasks.map((t) => {
+                const secs = getTrackedSeconds(t);
+                const assignees = (t.assignees || []).map((a) => a.fullName || a.email || a.userId).join(', ');
+
+                return {
+                    Project: project.name,
+                    Flow: flow.name,
+                    Task: t.title,
+                    Priority: t.priority,
+                    DueDate: fmtDate(t.dueDate),
+                    CreatedAt: fmtDate(t.createdAt),
+                    Assignees: assignees,
+                    TrackedSeconds: secs,
+                    TrackedHours: (secs / 3600).toFixed(2),
+                };
+            }),
+        );
+
+        const sheetTasks = XLSX.utils.json_to_sheet(rowsTasks);
+
+        const byMember = new Map<string, number>();
+        project.flows.forEach((flow) => {
+            flow.tasks.forEach((t) => {
+                const secs = getTrackedSeconds(t);
+                if (!t.assignees || t.assignees.length === 0) {
+                    const key = 'Unassigned';
+                    byMember.set(key, (byMember.get(key) || 0) + secs);
+                    return;
+                }
+                t.assignees.forEach((m) => {
+                    const key = m.fullName || m.email || m.userId;
+                    byMember.set(key, (byMember.get(key) || 0) + secs);
+                });
+            });
+        });
+
+        const rowsMembers = Array.from(byMember.entries()).map(([member, secs]) => ({
+            Project: project.name,
+            Member: member,
+            TrackedSeconds: secs,
+            TrackedHours: (secs / 3600).toFixed(2),
+        }));
+
+        const sheetMembers = XLSX.utils.json_to_sheet(rowsMembers);
+
+        // ---- Buat workbook & simpan
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, sheetTasks, 'Tasks');
+        XLSX.utils.book_append_sheet(wb, sheetMembers, 'By Member');
+
+        const today = new Date().toISOString().slice(0, 10);
+        const safeName = project.name.replace(/[\\/:*?"<>|]/g, '_');
+        XLSX.writeFile(wb, `Timesheet_${safeName}_${today}.xlsx`);
+    };
+
     return (
         <div className="grid gap-6 lg:grid-cols-[260px_minmax(0,1fr)]">
             <aside className="space-y-4 rounded-2xl border border-slate-200 bg-white/70 p-5 shadow-sm dark:border-slate-700 dark:bg-[#0f172a]">
@@ -1004,7 +1068,15 @@ const ComponentsAppsTaskManagement = () => {
                             {summary.tasks} task{summary.tasks === 1 ? '' : 's'}
                         </div>
 
-                        {/* MEMBERS BUTTON */}
+                        <button
+                            type="button"
+                            onClick={exportTimesheetXLSX}
+                            disabled={!activeProject}
+                            className="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:border-primary/40 hover:text-primary dark:border-slate-600 dark:text-slate-300 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                            Export
+                        </button>
+
                         <button
                             type="button"
                             onClick={() => activeProject && setIsMembersModalOpen(true)}
