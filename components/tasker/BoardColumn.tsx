@@ -22,7 +22,7 @@ export default function BoardColumn(props: BoardColumnProps) {
 
     return (
         <section className="flex h-full flex-col rounded-2xl border border-slate-200 bg-white/70 p-5 shadow-lg shadow-slate-900/5 backdrop-blur dark:border-slate-700 dark:bg-[#0f172a]">
-            <header className="mb-4">
+            <header className="mb-4 pb-2">
                 <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">{column.name}</p>
                 <p className="text-xs text-slate-400 dark:text-slate-500">
                     {column.tasks.length} task{column.tasks.length === 1 ? '' : 's'}

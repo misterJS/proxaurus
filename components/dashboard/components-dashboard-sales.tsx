@@ -114,23 +114,18 @@ export default function ComponentsDashboardSales() {
         fetchMonthSeconds();
     }, [projects, month]);
 
-    // ===== Stats (berbasis filter bulan) =====
     const stats = useMemo(() => {
         if (!projects.length) {
-            return {
-                totalProjects: 0,
-                totalTasks: 0,
-                totalHours: 0,
-                totalCost: 0,
-                projectStats: [] as ProjectStat[],
-            };
+            return { totalProjects: 0, totalTasks: 0, totalHours: 0, totalCost: 0, projectStats: [] as ProjectStat[] };
         }
 
         const projectStats: ProjectStat[] = projects.map((project) => {
             const tasks = project.flows.flatMap((flow) => flow.tasks);
             const totalTasks = tasks.length;
 
-            // seconds per user (dibagi rata ke assignee saat ini)
+            // INDEX email by userId dari members project
+            const emailById = new Map<string, string>((project.members ?? []).map((m) => [m.userId, m.email || m.fullName || m.userId]));
+
             const perUser = new Map<string, { email: string; seconds: number }>();
 
             tasks.forEach((task) => {
@@ -143,8 +138,9 @@ export default function ComponentsDashboardSales() {
                 } else {
                     const share = secsInMonth / task.assignees.length;
                     task.assignees.forEach((a) => {
-                        const cur = perUser.get(a.userId) || { email: a.email || 'Unknown', seconds: 0 };
-                        perUser.set(a.userId, { email: cur.email, seconds: cur.seconds + share });
+                        const email = emailById.get(a.userId) || a.email || a.fullName || 'Unknown';
+                        const cur = perUser.get(a.userId) || { email, seconds: 0 };
+                        perUser.set(a.userId, { email, seconds: cur.seconds + share });
                     });
                 }
             });

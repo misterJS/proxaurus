@@ -137,6 +137,7 @@ export default function TaskCard(props: TaskCardProps) {
                 </div>
 
                 <Dropdown
+                    placement="top-end"
                     btnClassName="rounded-lg border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600 hover:border-primary/40 hover:text-primary dark:border-slate-600 dark:text-slate-300"
                     button={<span>Assign</span>}
                 >
