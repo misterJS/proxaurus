@@ -16,8 +16,9 @@ export const useBoardData = (ownerId: string | null) => {
 
     const activeProject = useMemo(() => projects.find((p) => p.id === activeProjectId) ?? null, [projects, activeProjectId]);
 
-    const loadProjects = async (preferredProject?: string) => {
-        setIsLoading(true);
+    const loadProjects = async (preferredProject?: string | null, options?: { silent?: boolean }) => {
+        const silent = options?.silent ?? false;
+        if (!silent) setIsLoading(true);
         const { data, error } = await fetchProjectsRaw();
         if (error) {
             setError(error.message);

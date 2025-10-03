@@ -75,7 +75,7 @@ export default function ComponentsAppsTaskManagement() {
             updateTaskInState(taskId, (t) => ({ ...t, trackedSeconds: optimistic }));
             startMutate(async () => {
                 await stop(taskId, optimistic, (msg) => console.error(msg));
-                await loadProjects(activeProject?.id);
+                await loadProjects(activeProject?.id, { silent: true });
             });
         } else {
             start(taskId, task.trackedSeconds, (msg) => console.error(msg));
@@ -85,7 +85,7 @@ export default function ComponentsAppsTaskManagement() {
     const handleDeleteTask = (taskId: string) => {
         startMutate(async () => {
             await deleteTask(taskId);
-            await loadProjects(activeProject?.id);
+            await loadProjects(activeProject?.id, { silent: true });
         });
     };
 
@@ -279,15 +279,15 @@ export default function ComponentsAppsTaskManagement() {
                     ownerId={userId}
                     onClose={() => setProjectOpen(false)}
                     onCreated={(newProjectId) => {
-                        loadProjects(newProjectId);
+                        loadProjects(newProjectId, { silent: true });
                     }}
                 />
             )}
             {flowOpen && activeProject && (
-                <NewFlowModal projectId={activeProject.id} nextPosition={activeProject.flows.length} onClose={() => setFlowOpen(false)} onCreated={() => loadProjects(activeProject.id)} />
+                <NewFlowModal projectId={activeProject.id} nextPosition={activeProject.flows.length} onClose={() => setFlowOpen(false)} onCreated={() => loadProjects(activeProject.id, { silent: true })} />
             )}
             {taskOpen && activeProject && activeColumnId && userId && (
-                <NewTaskModal projectId={activeProject.id} flowId={activeColumnId} ownerId={userId} onClose={() => setTaskOpen(false)} onCreated={() => loadProjects(activeProject.id)} />
+                <NewTaskModal projectId={activeProject.id} flowId={activeColumnId} ownerId={userId} onClose={() => setTaskOpen(false)} onCreated={() => loadProjects(activeProject.id, { silent: true })} />
             )}
             {editOpen && editingTask && (
                 <EditTaskModal
@@ -296,7 +296,7 @@ export default function ComponentsAppsTaskManagement() {
                         setEditOpen(false);
                         setEditingTask(null);
                     }}
-                    onSaved={() => loadProjects(activeProject?.id)}
+                    onSaved={() => loadProjects(activeProject?.id, { silent: true })}
                 />
             )}
             {exportConfirmOpen && <ExportConfirmationModal onClose={() => setExportConfirmOpen(false)} onConfirm={handleConfirmExport} />}
