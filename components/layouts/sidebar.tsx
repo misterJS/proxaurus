@@ -97,7 +97,7 @@ const Sidebar = () => {
                                 <AnimateHeight duration={300} height={currentMenu === 'dashboard' ? 'auto' : 0}>
                                     <ul className="sub-menu text-gray-500">
                                         <li>
-                                            <Link href="/">{t('sales')}</Link>
+                                            <Link href="/">Summary Project</Link>
                                         </li>
                                         {/* <li>
                                             <Link href="/analytics">{t('analytics')}</Link>
