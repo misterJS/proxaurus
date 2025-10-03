@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 import { useMemo, useState } from 'react';
 import { useSelector } from 'react-redux';
 import type { IRootState } from '@/store';
@@ -115,83 +115,84 @@ export default function ComponentsAppsTaskManagement() {
                         <h1 className="text-2xl font-semibold text-slate-900 dark:text-white">Task Management</h1>
                         <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Kelola projects, flows, tasks, dan member.</p>
                     </div>
-                    <div className="flex flex-wrap items-center gap-3">
-                        <div className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 shadow-sm dark:border-slate-700 dark:text-slate-300">{summary.tasks} tasks</div>
-                        
-                        <div className="flex items-center gap-1 rounded-xl border border-slate-200 p-1 dark:border-slate-700">
+                    <div className="flex w-full flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end lg:max-w-3xl">
+                        <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center sm:justify-end">
+                            <div className="inline-flex w-full items-center justify-center rounded-xl border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 shadow-sm dark:border-slate-700 dark:text-slate-300 sm:w-auto">{summary.tasks} tasks</div>
+                            <div className="flex w-full items-stretch gap-1 rounded-xl border border-slate-200 bg-white p-1 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:w-auto">
+                                <button
+                                    type="button"
+                                    onClick={() => setViewMode('board')}
+                                    aria-pressed={viewMode === 'board'}
+                                    className={`flex-1 rounded-lg px-3 py-1.5 text-sm font-medium transition sm:flex-none ${
+                                        viewMode === 'board'
+                                            ? 'bg-primary text-white shadow-sm'
+                                            : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700'
+                                    }`}
+                                    title="Board View"
+                                >
+                                    <IconLayoutGrid className="h-4 w-4" />
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setViewMode('list')}
+                                    aria-pressed={viewMode === 'list'}
+                                    className={`flex-1 rounded-lg px-3 py-1.5 text-sm font-medium transition sm:flex-none ${
+                                        viewMode === 'list'
+                                            ? 'bg-primary text-white shadow-sm'
+                                            : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700'
+                                    }`}
+                                    title="List View"
+                                >
+                                    <IconLayout className="h-4 w-4" />
+                                </button>
+                            </div>
+                        </div>
+                        <div className="grid w-full gap-3 sm:w-auto sm:grid-cols-2 md:grid-cols-3 lg:flex lg:flex-wrap lg:justify-end lg:gap-3">
                             <button
                                 type="button"
-                                onClick={() => setViewMode('board')}
-                                className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${
-                                    viewMode === 'board'
-                                        ? 'bg-primary text-white shadow-sm'
-                                        : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700'
-                                }`}
-                                title="Board View"
+                                onClick={handleExport}
+                                disabled={!activeProject}
+                                className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:border-primary/40 hover:text-primary dark:border-slate-600 dark:text-slate-300 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
                             >
-                                <IconLayoutGrid className="h-4 w-4" />
+                                Export
                             </button>
                             <button
                                 type="button"
-                                onClick={() => setViewMode('list')}
-                                className={`rounded-lg px-3 py-1.5 text-sm font-medium transition ${
-                                    viewMode === 'list'
-                                        ? 'bg-primary text-white shadow-sm'
-                                        : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700'
-                                }`}
-                                title="List View"
+                                onClick={() => setMembersOpen(true)}
+                                className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 px-4 py-2 text-sm font-semibold text-slate-500 transition hover:border-primary/40 hover:text-primary dark:border-slate-600 dark:text-slate-400 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
                             >
-                                <IconLayout className="h-4 w-4" />
+                                <span className="inline-flex">
+                                    <IconPlus className="h-4 w-4" />
+                                </span>
+                                Members ({activeProject?.members?.length ?? 0})
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setInviteOpen(true)}
+                                className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 px-4 py-2 text-sm font-semibold text-slate-500 transition hover:border-primary/40 hover:text-primary dark:border-slate-600 dark:text-slate-400 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+                            >
+                                <IconPlus className="h-4 w-4" />
+                                Invite
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setFlowOpen(true)}
+                                disabled={!activeProject}
+                                className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 px-4 py-2 text-sm font-semibold text-slate-500 transition hover:border-primary/40 hover:text-primary dark:border-slate-600 dark:text-slate-400 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+                            >
+                                <IconPlus className="h-4 w-4" />
+                                Flow baru
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setTaskOpen(true)}
+                                disabled={!activeColumnId || !activeProject}
+                                className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-primary/25 transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+                            >
+                                <IconPlus className="h-5 w-5" />
+                                Task baru
                             </button>
                         </div>
-                        
-                        <button
-                            type="button"
-                            onClick={handleExport}
-                            disabled={!activeProject}
-                            className="inline-flex items-center gap-2 rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:border-primary/40 hover:text-primary dark:border-slate-600 dark:text-slate-300 disabled:cursor-not-allowed disabled:opacity-60"
-                        >
-                            Export
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => setMembersOpen(true)}
-                            className="inline-flex items-center gap-2 rounded-xl border border-dashed border-slate-300 px-4 py-2 text-sm font-semibold text-slate-500 transition hover:border-primary/40 hover:text-primary dark:border-slate-600 dark:text-slate-400 disabled:cursor-not-allowed disabled:opacity-60"
-                        >
-                            <span className="inline-flex">
-                                <IconPlus className="h-4 w-4" />
-                            </span>
-                            Members ({activeProject?.members?.length ?? 0})
-                        </button>
-
-                        <button
-                            type="button"
-                            onClick={() => setInviteOpen(true)}
-                            className="inline-flex items-center gap-2 rounded-xl border border-dashed border-slate-300 px-4 py-2 text-sm font-semibold text-slate-500 transition hover:border-primary/40 hover:text-primary dark:border-slate-600 dark:text-slate-400 disabled:cursor-not-allowed disabled:opacity-60"
-                        >
-                            <IconPlus className="h-4 w-4" />
-                            Invite
-                        </button>
-
-                        <button
-                            type="button"
-                            onClick={() => setFlowOpen(true)}
-                            disabled={!activeProject}
-                            className="inline-flex items-center gap-2 rounded-xl border border-dashed border-slate-300 px-4 py-2 text-sm font-semibold text-slate-500 transition hover:border-primary/40 hover:text-primary dark:border-slate-600 dark:text-slate-400 disabled:cursor-not-allowed disabled:opacity-60"
-                        >
-                            <IconPlus className="h-4 w-4" />
-                            Flow baru
-                        </button>
-
-                        <button
-                            type="button"
-                            onClick={() => setTaskOpen(true)}
-                            disabled={!activeColumnId || !activeProject}
-                            className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-primary/25 transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
-                        >
-                            <IconPlus className="h-5 w-5" />
-                            Task baru
-                        </button>
                     </div>
                 </div>
 
