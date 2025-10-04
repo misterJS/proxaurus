@@ -1,5 +1,6 @@
 'use client';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import type { FormEvent } from 'react';
 import IconPlus from '@/components/icon/icon-plus';
 import { rpc } from '@/services/tasker/rpc';
 import ModalShell from '../primitive/ModalShell';
@@ -9,33 +10,97 @@ type Props = {
     onClose: () => void;
 };
 
+type InviteResponse = {
+    token: string;
+    status?: string;
+};
+
 export default function InviteModal({ projectId, onClose }: Props) {
     const [email, setEmail] = useState('');
     const [role, setRole] = useState<'member' | 'admin'>('member');
     const [inviteLink, setInviteLink] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
     const [err, setErr] = useState<string | null>(null);
+    const [copyState, setCopyState] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
-    const submit = async (e: React.FormEvent) => {
+    useEffect(() => {
+        if (!copyState) return;
+        const timer = window.setTimeout(() => setCopyState(null), 2500);
+        return () => window.clearTimeout(timer);
+    }, [copyState]);
+
+    const resolveToken = (payload: unknown): InviteResponse | null => {
+        if (!payload) return null;
+        if (Array.isArray(payload)) {
+            const first = payload[0];
+            if (first && typeof first === 'object' && 'token' in first) return first as InviteResponse;
+            return null;
+        }
+        if (typeof payload === 'object' && payload && 'token' in payload) {
+            return payload as InviteResponse;
+        }
+        return null;
+    };
+
+    const submit = async (e: FormEvent) => {
         e.preventDefault();
         setLoading(true);
         setErr(null);
-        const { data, error } = await rpc.createOrRefreshInvite(projectId, email.trim(), role);
+        setCopyState(null);
+        const { data, error } = await rpc.createOrRefreshInvite(projectId, email.trim().toLowerCase(), role);
         setLoading(false);
         if (error) {
             setErr(error.message);
             return;
         }
-        if (data?.status === 'already_member') {
+        const info = resolveToken(data);
+        if (!info?.token) {
+            setErr('Gagal membuat tautan undangan. Coba lagi.');
+            return;
+        }
+        if (info.status === 'already_member') {
             setErr('Pengguna sudah menjadi member di project ini.');
             return;
         }
         const base = process.env.NEXT_PUBLIC_APP_URL || window.location.origin;
-        setInviteLink(`${base}/accept?token=${data.token}`);
+        setInviteLink(`${base}/accept?token=${info.token}`);
+        setEmail('');
+    };
+
+    const copyInviteLink = async () => {
+        if (!inviteLink) return;
+        try {
+            if (navigator.clipboard?.writeText && window.isSecureContext) {
+                await navigator.clipboard.writeText(inviteLink);
+            } else {
+                const textarea = document.createElement('textarea');
+                textarea.value = inviteLink;
+                textarea.setAttribute('readonly', '');
+                textarea.style.position = 'absolute';
+                textarea.style.left = '-9999px';
+                document.body.appendChild(textarea);
+                textarea.select();
+                const successful = document.execCommand('copy');
+                document.body.removeChild(textarea);
+                if (!successful) throw new Error('execCommand failed');
+            }
+            setCopyState({ type: 'success', message: 'Link undangan disalin ke clipboard.' });
+        } catch (error) {
+            console.error(error);
+            setCopyState({ type: 'error', message: 'Tidak bisa menyalin otomatis. Salin manual dari kolom di atas.' });
+        }
+    };
+
+    const handleClose = () => {
+        setInviteLink(null);
+        setErr(null);
+        setCopyState(null);
+        setEmail('');
+        onClose();
     };
 
     return (
-        <ModalShell title="Invite member" onClose={onClose} maxWidth="max-w-md" zIndexClass="z-[80]">
+        <ModalShell title="Invite member" onClose={handleClose} maxWidth="max-w-md" zIndexClass="z-[80]">
             <form className="grid gap-4" onSubmit={submit}>
                 {err ? <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-600 dark:border-rose-400/40 dark:bg-rose-500/10">{err}</div> : null}
 
@@ -53,25 +118,36 @@ export default function InviteModal({ projectId, onClose }: Props) {
                 </label>
 
                 {inviteLink ? (
-                    <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm dark:border-emerald-400/40 dark:bg-emerald-500/10">
-                        <p className="mb-2 font-medium text-emerald-700 dark:text-emerald-300">Invite link dibuat!</p>
-                        <div className="flex items-center gap-2">
-                            <input className="form-input flex-1" readOnly value={inviteLink} />
+                    <div className="space-y-3 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm dark:border-emerald-400/40 dark:bg-emerald-500/10">
+                        <div>
+                            <p className="font-medium text-emerald-700 dark:text-emerald-300">Invite link dibuat!</p>
+                            <p className="mt-1 text-xs text-emerald-600/80 dark:text-emerald-200/80">Bagikan tautan ini kepada orang yang kamu undang. Mereka perlu login atau membuat akun sebelum bergabung.</p>
+                        </div>
+                        <div className="flex flex-col gap-2 sm:flex-row">
+                            <input
+                                className="form-input flex-1"
+                                readOnly
+                                value={inviteLink}
+                                onFocus={(event) => event.currentTarget.select()}
+                            />
                             <button
                                 type="button"
-                                onClick={() => navigator.clipboard.writeText(inviteLink)}
-                                className="rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-700"
+                                onClick={copyInviteLink}
+                                className="inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-xs font-semibold text-white hover:bg-emerald-700"
                             >
-                                Copy
+                                Salin link
                             </button>
                         </div>
+                        {copyState ? (
+                            <p className={`text-xs ${copyState.type === 'success' ? 'text-emerald-600 dark:text-emerald-300' : 'text-rose-600 dark:text-rose-300'}`}>{copyState.message}</p>
+                        ) : null}
                     </div>
                 ) : null}
 
                 <div className="flex items-center justify-end gap-3 pt-2">
                     <button
                         type="button"
-                        onClick={onClose}
+                        onClick={handleClose}
                         className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-500 hover:border-slate-400 hover:text-slate-700 dark:border-slate-600 dark:text-slate-300 dark:hover:border-slate-500 dark:hover:text-white"
                     >
                         Tutup
