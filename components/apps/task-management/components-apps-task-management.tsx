@@ -11,7 +11,7 @@ import { useTaskTimer } from '@/hooks/tasker/useTaskTimer';
 import { exportTimesheetXLSX } from '@/utils/tasker/export';
 import { rpc } from '@/services/tasker/rpc';
 import { deleteTask, insertTask, updateTask, removeAssignee, addAssignee } from '@/services/tasker/tasks';
-import { BoardTask, Member, Priority } from '@/types/tasker';
+import { BoardTask, Member } from '@/types/tasker';
 import IconPlus from '@/components/icon/icon-plus';
 import IconLayoutGrid from '@/components/icon/icon-layout-grid';
 import IconLayout from '@/components/icon/icon-layout';
@@ -38,6 +38,11 @@ export default function ComponentsAppsTaskManagement() {
     const [editOpen, setEditOpen] = useState(false);
     const [exportConfirmOpen, setExportConfirmOpen] = useState(false);
     const [viewMode, setViewMode] = useState<'board' | 'list'>('board');
+    const now = new Date();
+    const defaultMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const [selectedMonth, setSelectedMonth] = useState<string>(defaultMonth);
+    const [selectedAssignee, setSelectedAssignee] = useState<'all' | 'unassigned' | string>('all');
+    const [hourlyRate, setHourlyRate] = useState<number>(75000);
 
     const [editingTask, setEditingTask] = useState<BoardTask | null>(null);
 
@@ -47,6 +52,39 @@ export default function ComponentsAppsTaskManagement() {
     };
 
     const summary = useMemo(() => ({ tasks: activeProject ? activeProject.flows.reduce((a, f) => a + f.tasks.length, 0) : 0 }), [activeProject]);
+    const formatCurrencyIdr = (value: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(Math.round(value));
+    const activeRole = activeProject ? myRoles[activeProject.id] ?? 'member' : 'member';
+    const canExport = activeRole === 'owner' || activeRole === 'admin';
+
+    const monthlySummary = useMemo(() => {
+        if (!activeProject) return { tasks: 0, seconds: 0, nominal: 0 };
+        const [year, monthStr] = selectedMonth.split('-').map((v) => Number(v));
+        const validMonth = !Number.isNaN(year) && !Number.isNaN(monthStr) && monthStr >= 1 && monthStr <= 12;
+        const fallbackStart = new Date();
+        fallbackStart.setUTCDate(1);
+        fallbackStart.setUTCHours(0, 0, 0, 0);
+        const start = validMonth ? new Date(Date.UTC(year, monthStr - 1, 1)) : fallbackStart;
+        const end = new Date(start);
+        end.setUTCMonth(start.getUTCMonth() + 1);
+
+        const tasks = activeProject.flows.flatMap((flow) =>
+            flow.tasks.filter((task) => {
+                const created = new Date(task.createdAt);
+                const inMonth = created >= start && created < end;
+                const assigneeMatch =
+                    selectedAssignee === 'all'
+                        ? true
+                        : selectedAssignee === 'unassigned'
+                        ? !task.assignees?.length
+                        : task.assignees?.some((a) => a.userId === selectedAssignee);
+                return inMonth && assigneeMatch;
+            }),
+        );
+
+        const seconds = tasks.reduce((acc, task) => acc + getTrackedSeconds(task), 0);
+        const nominal = (seconds / 3600) * (hourlyRate || 0);
+        return { tasks: tasks.length, seconds, nominal };
+    }, [activeProject, getTrackedSeconds, hourlyRate, selectedAssignee, selectedMonth]);
 
     if (userLoading || isLoading) return <div className="flex min-h-[400px] items-center justify-center text-slate-500">Memuat Task Management...</div>;
     if (userError || error) return <div className="rounded-xl border border-rose-200 bg-rose-50 p-6 text-rose-500 dark:border-rose-400/40 dark:bg-rose-500/10">{userError || error}</div>;
@@ -90,11 +128,18 @@ export default function ComponentsAppsTaskManagement() {
     };
 
     const handleExport = () => {
+        if (!canExport) return;
         setExportConfirmOpen(true);
     };
 
     const handleConfirmExport = () => {
-        if (activeProject) exportTimesheetXLSX(activeProject, getTrackedSeconds);
+        if (!canExport) return;
+        if (activeProject)
+            exportTimesheetXLSX(activeProject, getTrackedSeconds, {
+                month: selectedMonth,
+                assigneeFilter: selectedAssignee,
+                hourlyRate,
+            });
     };
 
     return (
@@ -151,8 +196,9 @@ export default function ComponentsAppsTaskManagement() {
                             <button
                                 type="button"
                                 onClick={handleExport}
-                                disabled={!activeProject}
+                                disabled={!activeProject || !canExport}
                                 className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:border-primary/40 hover:text-primary dark:border-slate-600 dark:text-slate-300 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+                                title={!canExport ? 'Hanya admin/owner yang dapat export' : 'Export laporan'}
                             >
                                 Export
                             </button>
@@ -192,6 +238,52 @@ export default function ComponentsAppsTaskManagement() {
                                 <IconPlus className="h-5 w-5" />
                                 Task baru
                             </button>
+                        </div>
+                    </div>
+                </div>
+                <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                        <label className="space-y-2 text-sm font-medium text-slate-700 dark:text-slate-200">
+                            <span className="block text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Bulan</span>
+                            <input
+                                type="month"
+                                value={selectedMonth}
+                                onChange={(e) => setSelectedMonth(e.target.value)}
+                                className="form-input w-full"
+                            />
+                        </label>
+                        <label className="space-y-2 text-sm font-medium text-slate-700 dark:text-slate-200">
+                            <span className="block text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Filter User</span>
+                            <select
+                                value={selectedAssignee}
+                                onChange={(e) => setSelectedAssignee(e.target.value)}
+                                className="form-select w-full"
+                            >
+                                <option value="all">Semua user</option>
+                                <option value="unassigned">Tanpa assignee</option>
+                                {(activeProject?.members ?? []).map((m) => (
+                                    <option key={m.userId} value={m.userId}>
+                                        {m.fullName || m.email || m.userId}
+                                    </option>
+                                ))}
+                            </select>
+                        </label>
+                        <label className="space-y-2 text-sm font-medium text-slate-700 dark:text-slate-200">
+                            <span className="block text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Tarif / jam (IDR)</span>
+                            <input
+                                type="number"
+                                min={0}
+                                value={hourlyRate}
+                                onChange={(e) => setHourlyRate(Number(e.target.value) || 0)}
+                                className="form-input w-full"
+                            />
+                        </label>
+                        <div className="flex flex-col justify-center rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-700 shadow-inner dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100">
+                            <span className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Nominal bulan ini</span>
+                            <span className="text-lg font-semibold">{formatCurrencyIdr(monthlySummary.nominal)}</span>
+                            <span className="text-xs text-slate-500 dark:text-slate-400">
+                                {monthlySummary.tasks} task | {(monthlySummary.seconds / 3600).toFixed(1)} jam
+                            </span>
                         </div>
                     </div>
                 </div>
