@@ -5,9 +5,10 @@ import IconDownload from '@/components/icon/icon-download';
 type Props = {
     onClose: () => void;
     onConfirm: () => void;
+    detailMessage?: string;
 };
 
-export default function ExportConfirmationModal({ onClose, onConfirm }: Props) {
+export default function ExportConfirmationModal({ onClose, onConfirm, detailMessage }: Props) {
     const handleConfirm = () => {
         onConfirm();
         onClose();
@@ -20,9 +21,7 @@ export default function ExportConfirmationModal({ onClose, onConfirm }: Props) {
                     <p className="text-sm text-slate-600 dark:text-slate-300">
                         Apakah Anda yakin ingin mengunduh timesheet dalam format Excel?
                     </p>
-                    <p className="text-sm text-slate-500 dark:text-slate-400">
-                        File akan berisi semua data task, assignees, dan waktu yang telah dilacak untuk project ini.
-                    </p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">{detailMessage ?? 'File akan berisi semua data task, assignees, dan waktu yang telah dilacak untuk project ini.'}</p>
                 </div>
 
                 <div className="flex items-center justify-end gap-3 pt-2">

@@ -6,6 +6,9 @@ import { useMemo, useState, useEffect } from 'react';
 import type { IRootState } from '@/store';
 import { useAuthUser } from '@/hooks/tasker/useAuthUser';
 import { useBoardData } from '@/hooks/tasker/useBoardData';
+import { useTaskTimer } from '@/hooks/tasker/useTaskTimer';
+import { exportAllProjectsTimesheetXLSX } from '@/utils/tasker/export';
+import ExportConfirmationModal from '@/components/tasker/modals/ExportConfirmationModal';
 import IconDollarSign from '@/components/icon/icon-dollar-sign';
 import IconUsers from '@/components/icon/icon-users';
 import IconClock from '@/components/icon/icon-clock';
@@ -35,12 +38,16 @@ export default function ComponentsDashboardSales() {
 
     // data board (projects + tasks + assignees)
     const { userId } = useAuthUser();
-    const { projects, isLoading } = useBoardData(userId);
+    const { projects, isLoading, myRoles } = useBoardData(userId);
+    const { getTrackedSeconds } = useTaskTimer();
 
     // ===== Filter per-bulan =====
     const [month, setMonth] = useState<string>(() => new Date().toISOString().slice(0, 7)); // 'YYYY-MM'
     const [monthSecondsByTask, setMonthSecondsByTask] = useState<Record<string, number>>({});
     const [filterLoading, setFilterLoading] = useState(false);
+    const [exportConfirmOpen, setExportConfirmOpen] = useState(false);
+
+    const canExportAll = projects.length > 0 && Object.values(myRoles).some((r) => r === 'owner' || r === 'admin');
 
     // Range bulan (UTC) → pakai YYYY-MM-DD string agar aman untuk timestamp/timestamptz
     const monthDateRangeStrings = (ym: string) => {
@@ -183,6 +190,16 @@ export default function ComponentsDashboardSales() {
         return `${h}j ${m}m`;
     };
 
+    const handleExportAll = () => {
+        if (!canExportAll) return;
+        setExportConfirmOpen(true);
+    };
+
+    const handleConfirmExportAll = () => {
+        if (!canExportAll) return;
+        exportAllProjectsTimesheetXLSX(projects, getTrackedSeconds, { month, hourlyRate: HOURLY_RATE });
+    };
+
     if (isLoading) {
         return (
             <div className="flex min-h-[400px] items-center justify-center text-slate-500">
@@ -211,11 +228,21 @@ export default function ComponentsDashboardSales() {
             {/* Filter Per Bulan */}
             <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
                 <div className="text-sm text-slate-500 dark:text-slate-400">{filterLoading ? 'Menghitung data bulan ini…' : `Menampilkan bulan: ${month}`}</div>
-
-                <label className="inline-flex items-center gap-2 text-sm">
-                    <span className="text-slate-600 dark:text-slate-300">Filter</span>
-                    <input type="month" className="form-input" value={month} onChange={(e) => setMonth(e.target.value)} max={new Date().toISOString().slice(0, 7)} />
-                </label>
+                <div className="flex flex-wrap items-center gap-3">
+                    <label className="inline-flex items-center gap-2 text-sm">
+                        <span className="text-slate-600 dark:text-slate-300">Filter</span>
+                        <input type="month" className="form-input" value={month} onChange={(e) => setMonth(e.target.value)} max={new Date().toISOString().slice(0, 7)} />
+                    </label>
+                    <button
+                        type="button"
+                        onClick={handleExportAll}
+                        disabled={!canExportAll}
+                        className="inline-flex items-center justify-center gap-2 rounded-xl border border-primary/40 bg-primary/10 px-4 py-2 text-sm font-semibold text-primary transition hover:border-primary/60 hover:bg-primary/20 disabled:cursor-not-allowed disabled:opacity-60 dark:border-sky-400/40 dark:bg-sky-500/10 dark:text-sky-100"
+                        title={!canExportAll ? 'Hanya admin/owner yang dapat export semua project' : 'Export seluruh task pada bulan ini'}
+                    >
+                        Export semua project
+                    </button>
+                </div>
             </div>
 
             {/* Summary Cards */}
@@ -328,6 +355,13 @@ export default function ComponentsDashboardSales() {
 
             {/* soft gradient background */}
             <div className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[240px] bg-gradient-to-b from-primary/10 to-transparent dark:from-primary/20" />
+            {exportConfirmOpen && (
+                <ExportConfirmationModal
+                    onClose={() => setExportConfirmOpen(false)}
+                    onConfirm={handleConfirmExportAll}
+                    detailMessage={`File akan berisi semua task dari seluruh project untuk bulan ${month}.`}
+                />
+            )}
         </div>
     );
 }

@@ -33,6 +33,7 @@ export const buildTimesheetRows = (
     getTrackedSeconds: (task: BoardTask) => number,
     options?: TimesheetExportOptions,
 ) => {
+    const ADMIN_COMMISSION_PER_HOUR = 10_000;
     const assigneeFilter = options?.assigneeFilter ?? 'all';
     const hourlyRate = options?.hourlyRate ?? 0;
     const monthRange = options?.month ? getMonthRange(options.month) : null;
@@ -96,16 +97,41 @@ export const buildTimesheetRows = (
         });
     });
 
-    const rowsMembers = Array.from(byMember.entries()).map(([member, payload]) => ({
-        Month: options?.month ?? 'All',
-        Project: project.name,
-        Member: member,
-        TrackedSeconds: payload.secs,
-        TrackedHours: (payload.secs / 3600).toFixed(2),
-        HourlyRate: hourlyRate,
-        Nominal: Math.round(payload.nominal),
-        NominalFormatted: formatCurrencyIdr(payload.nominal),
-    }));
+    const rowsMembers = Array.from(byMember.entries()).map(([member, payload]) => {
+        const hours = payload.secs / 3600;
+        const commission = hours * ADMIN_COMMISSION_PER_HOUR;
+        return {
+            Month: options?.month ?? 'All',
+            Project: project.name,
+            Member: member,
+            TrackedSeconds: payload.secs,
+            TrackedHours: hours.toFixed(2),
+            HourlyRate: hourlyRate,
+            Nominal: Math.round(payload.nominal),
+            NominalFormatted: formatCurrencyIdr(payload.nominal),
+            AdminCommission: Math.round(commission),
+            AdminCommissionFormatted: formatCurrencyIdr(commission),
+        };
+    });
+
+    if (rowsMembers.length) {
+        const totalSeconds = rowsMembers.reduce((acc, r) => acc + r.TrackedSeconds, 0);
+        const totalHours = totalSeconds / 3600;
+        const totalCommission = totalHours * ADMIN_COMMISSION_PER_HOUR;
+        const totalNominal = rowsMembers.reduce((acc, r) => acc + (Number.isFinite(r.Nominal) ? r.Nominal : 0), 0);
+        rowsMembers.push({
+            Month: options?.month ?? 'All',
+            Project: project.name,
+            Member: 'TOTAL',
+            TrackedSeconds: Math.round(totalSeconds),
+            TrackedHours: totalHours.toFixed(2),
+            HourlyRate: hourlyRate,
+            Nominal: Math.round(totalNominal),
+            NominalFormatted: formatCurrencyIdr(totalNominal),
+            AdminCommission: Math.round(totalCommission),
+            AdminCommissionFormatted: formatCurrencyIdr(totalCommission),
+        });
+    }
 
     return { rowsTasks, rowsMembers };
 };
@@ -119,4 +145,28 @@ export const exportTimesheetXLSX = (project: BoardProject, getTrackedSeconds: (t
     const safeName = project.name.replace(/[\\/:*?"<>|]/g, '_');
     const monthSuffix = options?.month ? `_${options.month}` : '';
     XLSX.writeFile(wb, `Timesheet_${safeName}${monthSuffix}_${today}.xlsx`);
+};
+
+export const exportAllProjectsTimesheetXLSX = (
+    projects: BoardProject[],
+    getTrackedSeconds: (task: BoardTask) => number,
+    options?: TimesheetExportOptions,
+) => {
+    const wb = XLSX.utils.book_new();
+
+    const allTasks: any[] = [];
+    const allMembers: any[] = [];
+
+    projects.forEach((project) => {
+        const { rowsTasks, rowsMembers } = buildTimesheetRows(project, getTrackedSeconds, options);
+        allTasks.push(...rowsTasks);
+        allMembers.push(...rowsMembers);
+    });
+
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(allTasks), 'Tasks');
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(allMembers), 'By Member');
+
+    const today = new Date().toISOString().slice(0, 10);
+    const monthSuffix = options?.month ? `_${options.month}` : '';
+    XLSX.writeFile(wb, `Timesheet_AllProjects${monthSuffix}_${today}.xlsx`);
 };

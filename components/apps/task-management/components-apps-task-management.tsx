@@ -191,13 +191,13 @@ export default function ComponentsAppsTaskManagement() {
                                     <IconLayout className="h-4 w-4" />
                                 </button>
                             </div>
-                        </div>
-                        <div className="grid w-full gap-3 sm:w-auto sm:grid-cols-2 md:grid-cols-3 lg:flex lg:flex-wrap lg:justify-end lg:gap-3">
-                            <button
-                                type="button"
-                                onClick={handleExport}
-                                disabled={!activeProject || !canExport}
-                                className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:border-primary/40 hover:text-primary dark:border-slate-600 dark:text-slate-300 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+                    </div>
+                    <div className="grid w-full gap-3 sm:w-auto sm:grid-cols-2 md:grid-cols-3 lg:flex lg:flex-wrap lg:justify-end lg:gap-3">
+                        <button
+                            type="button"
+                            onClick={handleExport}
+                            disabled={!activeProject || !canExport}
+                            className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:border-primary/40 hover:text-primary dark:border-slate-600 dark:text-slate-300 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
                                 title={!canExport ? 'Hanya admin/owner yang dapat export' : 'Export laporan'}
                             >
                                 Export
