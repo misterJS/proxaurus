@@ -31,7 +31,7 @@ type ProjectStat = {
     userBreakdown: UserBreakdownItem[];
 };
 
-const HOURLY_RATE = 50_000;
+const DEFAULT_HOURLY_RATE = 50_000;
 
 export default function ComponentsDashboardSales() {
     const isRtl = useSelector((s: IRootState) => s.themeConfig.rtlClass === 'rtl');
@@ -132,32 +132,45 @@ export default function ComponentsDashboardSales() {
 
             // INDEX email by userId dari members project
             const emailById = new Map<string, string>((project.members ?? []).map((m) => [m.userId, m.email || m.fullName || m.userId]));
+            const rateById = new Map<string, number>((project.members ?? []).map((m) => [m.userId, typeof m.hourlyRate === 'number' ? m.hourlyRate : DEFAULT_HOURLY_RATE]));
 
-            const perUser = new Map<string, { email: string; seconds: number }>();
+            const resolveRate = (userId: string | null | undefined) => {
+                if (!userId) return DEFAULT_HOURLY_RATE;
+                return rateById.get(userId) ?? DEFAULT_HOURLY_RATE;
+            };
+
+            const perUser = new Map<string, { email: string; seconds: number; cost: number }>();
 
             tasks.forEach((task) => {
                 const secsInMonth = monthSecondsByTask[task.id] ?? 0;
                 if (secsInMonth <= 0) return;
 
                 if (!task.assignees.length) {
-                    const cur = perUser.get('Unassigned') || { email: 'Unassigned', seconds: 0 };
-                    perUser.set('Unassigned', { email: cur.email, seconds: cur.seconds + secsInMonth });
+                    const rate = DEFAULT_HOURLY_RATE;
+                    const cur = perUser.get('Unassigned') || { email: 'Unassigned', seconds: 0, cost: 0 };
+                    const addedCost = (secsInMonth / 3600) * rate;
+                    perUser.set('Unassigned', { email: cur.email, seconds: cur.seconds + secsInMonth, cost: cur.cost + addedCost });
                 } else {
                     const share = secsInMonth / task.assignees.length;
                     task.assignees.forEach((a) => {
                         const email = emailById.get(a.userId) || a.email || a.fullName || 'Unknown';
-                        const cur = perUser.get(a.userId) || { email, seconds: 0 };
-                        perUser.set(a.userId, { email, seconds: cur.seconds + share });
+                        const rate = resolveRate(a.userId);
+                        const cur = perUser.get(a.userId) || { email, seconds: 0, cost: 0 };
+                        const addedCost = (share / 3600) * rate;
+                        perUser.set(a.userId, { email, seconds: cur.seconds + share, cost: cur.cost + addedCost });
                     });
                 }
             });
 
-            const userBreakdown: UserBreakdownItem[] = Array.from(perUser.entries()).map(([userId, d]) => ({
-                userId,
-                email: d.email,
-                hours: d.seconds / 3600,
-                cost: (d.seconds / 3600) * HOURLY_RATE,
-            }));
+            const userBreakdown: UserBreakdownItem[] = Array.from(perUser.entries()).map(([userId, d]) => {
+                const hours = d.seconds / 3600;
+                return {
+                    userId,
+                    email: d.email,
+                    hours,
+                    cost: d.cost,
+                };
+            });
 
             const totalSeconds = tasks.reduce((sum, t) => sum + (monthSecondsByTask[t.id] ?? 0), 0);
             const totalHours = totalSeconds / 3600;
@@ -197,7 +210,7 @@ export default function ComponentsDashboardSales() {
 
     const handleConfirmExportAll = () => {
         if (!canExportAll) return;
-        exportAllProjectsTimesheetXLSX(projects, getTrackedSeconds, { month, hourlyRate: HOURLY_RATE });
+        exportAllProjectsTimesheetXLSX(projects, getTrackedSeconds, { month, hourlyRate: DEFAULT_HOURLY_RATE });
     };
 
     if (isLoading) {
@@ -288,7 +301,7 @@ export default function ComponentsDashboardSales() {
                         </div>
                     </div>
                     <p className="text-3xl font-bold text-slate-900 dark:text-white">{formatCurrency(stats.totalCost)}</p>
-                    <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">@ Rp 50k/jam</p>
+                    <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">Cost pakai rate per member</p>
                 </div>
             </div>
 

@@ -1,4 +1,10 @@
-export const formatDue = (iso: string | null) => {
+type FormatDueOptions = {
+    completed?: boolean;
+};
+
+export const formatDue = (iso: string | null, options?: FormatDueOptions) => {
+    const completed = options?.completed ?? false;
+
     if (!iso) return { formatted: 'Tidak ada due date', helper: '', overdue: false };
     const due = new Date(iso);
     const today = new Date();
@@ -7,6 +13,9 @@ export const formatDue = (iso: string | null) => {
     normalizedDue.setHours(0, 0, 0, 0);
     const diffDays = Math.round((normalizedDue.getTime() - today.getTime()) / 86400000);
     const formatted = due.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+
+    if (completed) return { formatted, helper: 'Tepat waktu', overdue: false };
+
     let helper = '';
     if (diffDays > 0) helper = `${diffDays} hari lagi`;
     else if (diffDays === 0) helper = 'Jatuh tempo hari ini';

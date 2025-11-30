@@ -8,6 +8,7 @@ export type BoardColumnProps = {
     column: BoardFlow;
     myRole: 'owner' | 'admin' | 'member';
     projectMembers: Member[];
+    isLastFlow: boolean;
     onSort: (flowId: string, nextTasks: BoardTask[]) => void;
     getTrackedSeconds: (task: BoardTask) => number;
     timerTaskId: string | null;
@@ -18,7 +19,7 @@ export type BoardColumnProps = {
 };
 
 export default function BoardColumn(props: BoardColumnProps) {
-    const { column, myRole, projectMembers, onSort, getTrackedSeconds, timerTaskId, onEdit, onToggleTimer, onDelete, onToggleAssignee } = props;
+    const { column, myRole, projectMembers, isLastFlow, onSort, getTrackedSeconds, timerTaskId, onEdit, onToggleTimer, onDelete, onToggleAssignee } = props;
 
     return (
         <section className="flex h-full flex-col rounded-2xl border border-slate-200 bg-white/70 p-5 shadow-lg shadow-slate-900/5 backdrop-blur dark:border-slate-700 dark:bg-[#0f172a]">
@@ -38,6 +39,7 @@ export default function BoardColumn(props: BoardColumnProps) {
                             task={task}
                             projectMembers={projectMembers}
                             myRole={myRole}
+                            isLastFlow={isLastFlow}
                             timerRunning={timerTaskId === task.id}
                             totalHours={Math.floor(task.trackedSeconds / 3600)}
                             displayHours={Math.floor(tracked / 3600)}

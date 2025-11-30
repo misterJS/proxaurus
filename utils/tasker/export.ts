@@ -35,9 +35,18 @@ export const buildTimesheetRows = (
 ) => {
     const ADMIN_COMMISSION_PER_HOUR = 10_000;
     const assigneeFilter = options?.assigneeFilter ?? 'all';
-    const hourlyRate = options?.hourlyRate ?? 0;
+    const defaultHourlyRate = options?.hourlyRate ?? 0;
     const monthRange = options?.month ? getMonthRange(options.month) : null;
     const hasValidRange = !!monthRange && Number.isFinite(monthRange.start.getTime()) && Number.isFinite(monthRange.end.getTime());
+    const memberRateMap = new Map<string, number>();
+    (project.members ?? []).forEach((m) => {
+        if (typeof m.hourlyRate === 'number') memberRateMap.set(m.userId, m.hourlyRate);
+    });
+
+    const resolveRate = (memberId: string | null | undefined) => {
+        if (!memberId) return defaultHourlyRate;
+        return memberRateMap.get(memberId) ?? defaultHourlyRate;
+    };
 
     const tasks = project.flows.flatMap((flow) =>
         flow.tasks
@@ -52,9 +61,27 @@ export const buildTimesheetRows = (
 
     const rowsTasks = tasks.map(({ flowName, task }) => {
         const secs = getTrackedSeconds(task);
+        const normalizedAssignees =
+            task.assignees?.length && assigneeFilter !== 'unassigned'
+                ? task.assignees
+                : task.assignees?.length
+                ? task.assignees
+                : [{ userId: 'unassigned', fullName: 'Unassigned', email: null, avatarUrl: null }];
+
+        const relevantAssignees =
+            assigneeFilter === 'all'
+                ? normalizedAssignees
+                : normalizedAssignees.filter((a) => (assigneeFilter === 'unassigned' ? a.userId === 'unassigned' : a.userId === assigneeFilter));
+
+        const shareSeconds = assigneeFilter === 'all' && normalizedAssignees.length ? secs / normalizedAssignees.length : secs;
         const hours = secs / 3600;
-        const nominal = hours * hourlyRate;
+        let nominal = 0;
+        relevantAssignees.forEach((member) => {
+            const rate = resolveRate(member.userId);
+            nominal += (shareSeconds / 3600) * rate;
+        });
         const assignees = (task.assignees || []).map((a) => labelForMember(a)).join(', ');
+        const effectiveRate = hours > 0 ? nominal / hours : defaultHourlyRate;
         return {
             Month: options?.month ?? 'All',
             Project: project.name,
@@ -66,7 +93,7 @@ export const buildTimesheetRows = (
             Assignees: assignees || 'Unassigned',
             TrackedSeconds: secs,
             TrackedHours: hours.toFixed(2),
-            HourlyRate: hourlyRate,
+            HourlyRate: Math.round(effectiveRate),
             Nominal: Math.round(nominal),
             NominalFormatted: formatCurrencyIdr(nominal),
         };
@@ -89,10 +116,11 @@ export const buildTimesheetRows = (
 
         const shareSeconds = assigneeFilter === 'all' ? secs / normalizedAssignees.length : secs;
         relevantAssignees.forEach((member) => {
+            const rate = resolveRate(member.userId);
             const key = labelForMember(member);
             const prev = byMember.get(key) || { secs: 0, nominal: 0 };
             const hours = shareSeconds / 3600;
-            const nominal = hours * hourlyRate;
+            const nominal = hours * rate;
             byMember.set(key, { secs: prev.secs + shareSeconds, nominal: prev.nominal + nominal });
         });
     });
@@ -106,7 +134,7 @@ export const buildTimesheetRows = (
             Member: member,
             TrackedSeconds: payload.secs,
             TrackedHours: hours.toFixed(2),
-            HourlyRate: hourlyRate,
+            HourlyRate: Math.round(rowsMembers.length ? payload.nominal / hours : defaultHourlyRate),
             Nominal: Math.round(payload.nominal),
             NominalFormatted: formatCurrencyIdr(payload.nominal),
             AdminCommission: Math.round(commission),

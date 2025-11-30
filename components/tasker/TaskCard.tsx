@@ -16,6 +16,7 @@ export type TaskCardProps = {
     totalHours: number; // floor(trackedSeconds/3600) saved value
     displayHours: number; // live
     displayMinutes: number; // live
+    isLastFlow: boolean;
     onEdit: (task: BoardTask) => void;
     onToggleTimer: (taskId: string) => void;
     onDelete: (taskId: string) => void;
@@ -34,8 +35,24 @@ const badgeClassesByPriority = (p: Priority) => {
 };
 
 export default function TaskCard(props: TaskCardProps) {
-    const { task, projectMembers, myRole, timerRunning, totalHours, displayHours, displayMinutes, onEdit, onToggleTimer, onDelete, onToggleAssignee } = props;
-    const dueInfo = formatDue(task.dueDate);
+    const { task, projectMembers, myRole, timerRunning, totalHours, displayHours, displayMinutes, isLastFlow, onEdit, onToggleTimer, onDelete, onToggleAssignee } = props;
+    const dueInfo = formatDue(task.dueDate, { completed: isLastFlow });
+
+    const formatTimeAgo = (date: Date): string => {
+        const now = new Date();
+        const diffMs = now.getTime() - date.getTime();
+        const diffMins = Math.floor(diffMs / 60000);
+        const diffHours = Math.floor(diffMs / 3600000);
+        const diffDays = Math.floor(diffMs / 86400000);
+
+        if (diffMins < 1) return 'baru saja';
+        if (diffMins < 60) return `${diffMins} menit yang lalu`;
+        if (diffHours < 24) return `${diffHours} jam yang lalu`;
+        if (diffDays < 30) return `${diffDays} hari yang lalu`;
+        return date.toLocaleDateString('id-ID');
+    };
+
+    const createdWhen = formatTimeAgo(new Date(task.createdAt));
     const canDelete = myRole === 'owner' || myRole === 'admin';
 
     return (
@@ -47,6 +64,7 @@ export default function TaskCard(props: TaskCardProps) {
                 <div>
                     <span className={`inline-block rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase ${badgeClassesByPriority(task.priority)}`}>{task.priority}</span>
                     <h3 className="mt-1 text-base font-semibold text-slate-900 dark:text-white">{task.title}</h3>
+                    <p className="text-[11px] text-slate-400 dark:text-slate-500">Dibuat {createdWhen}</p>
                     {task.description ? (
                         <div className="text-xs text-slate-500 dark:text-slate-400 whitespace-pre-wrap break-words [overflow-wrap:anywhere]">
                             <ReactMarkdown

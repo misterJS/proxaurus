@@ -7,6 +7,8 @@ export type Member = {
     email: string | null;
     avatarUrl: string | null;
     role?: ProjectRole;
+    isActive?: boolean;
+    hourlyRate?: number | null;
 };
 
 export type TaskActivityKind = 'title_changed' | 'description_changed' | 'due_changed' | 'timer_started' | 'timer_stopped' | 'assignee_added' | 'assignee_removed' | 'reordered';

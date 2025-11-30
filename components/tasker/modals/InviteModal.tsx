@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import IconPlus from '@/components/icon/icon-plus';
 import { rpc } from '@/services/tasker/rpc';
+import { findUserByEmail, insertProjectMember } from '@/services/tasker/projects';
 import ModalShell from '../primitive/ModalShell';
 
 type Props = {
@@ -47,24 +48,53 @@ export default function InviteModal({ projectId, onClose }: Props) {
         setLoading(true);
         setErr(null);
         setCopyState(null);
-        const { data, error } = await rpc.createOrRefreshInvite(projectId, email.trim().toLowerCase(), role);
-        setLoading(false);
-        if (error) {
-            setErr(error.message);
-            return;
+        const normalizedEmail = email.trim().toLowerCase();
+        try {
+            const { data: existingUser, error: userErr } = await findUserByEmail(normalizedEmail);
+            if (userErr) throw userErr;
+
+            // Jika user sudah terdaftar, langsung assign ke project tanpa invite
+            if (existingUser?.id) {
+                const { error: insertErr } = await insertProjectMember({ project_id: projectId, user_id: existingUser.id, role, is_active: true, hourly_rate: null });
+                if (insertErr) {
+                    // Jika sudah member, beri pesan lebih jelas
+                    if ('code' in insertErr && insertErr.code === '23505') {
+                        setErr('Pengguna sudah menjadi member di project ini.');
+                    } else {
+                        setErr(insertErr.message);
+                    }
+                } else {
+                    // selesai, tutup modal
+                    setEmail('');
+                    setInviteLink(null);
+                    onClose();
+                }
+                setLoading(false);
+                return;
+            }
+
+            // Jika user belum terdaftar, pakai mekanisme invite
+            const { data, error } = await rpc.createOrRefreshInvite(projectId, normalizedEmail, role);
+            if (error) throw error;
+            const info = resolveToken(data);
+            if (!info?.token) {
+                setErr('Gagal membuat tautan undangan. Coba lagi.');
+                setLoading(false);
+                return;
+            }
+            if (info.status === 'already_member') {
+                setErr('Pengguna sudah menjadi member di project ini.');
+                setLoading(false);
+                return;
+            }
+            const base = process.env.NEXT_PUBLIC_APP_URL || window.location.origin;
+            setInviteLink(`${base}/accept?token=${info.token}`);
+            setEmail('');
+            setLoading(false);
+        } catch (error: any) {
+            setLoading(false);
+            setErr(error?.message || 'Gagal memproses permintaan. Coba lagi.');
         }
-        const info = resolveToken(data);
-        if (!info?.token) {
-            setErr('Gagal membuat tautan undangan. Coba lagi.');
-            return;
-        }
-        if (info.status === 'already_member') {
-            setErr('Pengguna sudah menjadi member di project ini.');
-            return;
-        }
-        const base = process.env.NEXT_PUBLIC_APP_URL || window.location.origin;
-        setInviteLink(`${base}/accept?token=${info.token}`);
-        setEmail('');
     };
 
     const copyInviteLink = async () => {

@@ -6,7 +6,7 @@ import { toggleSidebar } from '@/store/themeConfigSlice';
 import AnimateHeight from 'react-animate-height';
 import { IRootState } from '@/store';
 import { useEffect, useState } from 'react';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { getTranslation } from '@/i18n';
 
 import IconCaretsDown from '@/components/icon/icon-carets-down';
@@ -14,15 +14,20 @@ import IconCaretDown from '@/components/icon/icon-caret-down';
 import IconMinus from '@/components/icon/icon-minus';
 import IconMenuDashboard from '@/components/icon/menu/icon-menu-dashboard';
 import IconMenuApps from '@/components/icon/menu/icon-menu-apps';
+import IconUsers from '@/components/icon/icon-users';
+import { fetchProjectsSimple } from '@/services/tasker/projects';
 
 const Sidebar = () => {
     const dispatch = useDispatch();
     const { t } = getTranslation();
     const pathname = usePathname();
+    const searchParams = useSearchParams();
 
     const [currentMenu, setCurrentMenu] = useState<string>('');
     const semidark = useSelector((state: IRootState) => state.themeConfig.semidark);
     const themeConfig = useSelector((state: IRootState) => state.themeConfig);
+    const [projects, setProjects] = useState<Array<{ id: string; name: string }>>([]);
+    const activeProjectFromQuery = searchParams.get('projectId');
 
     const toggleMenu = (value: string) => {
         setCurrentMenu((old) => (old === value ? '' : value));
@@ -50,6 +55,21 @@ const Sidebar = () => {
             dispatch(toggleSidebar());
         }
     }, [pathname]);
+
+    useEffect(() => {
+        const loadProjects = async () => {
+            try {
+                const { data, error } = await fetchProjectsSimple();
+                if (error) throw error;
+                setProjects(
+                    (data ?? []).map((p: any) => ({ id: p.id as string, name: p.name as string })).sort((a, b) => a.name.localeCompare(b.name)),
+                );
+            } catch (err) {
+                console.error('Failed to load projects for sidebar', err);
+            }
+        };
+        loadProjects();
+    }, []);
 
     const setActiveRoute = () => {
         const allLinks = document.querySelectorAll('.sidebar ul a.active');
@@ -119,11 +139,52 @@ const Sidebar = () => {
                             </h2>
 
                             {/* TASK MANAGEMENT ONLY */}
-                            <li className="nav-item">
-                                <Link href="/apps/task-management" className="group">
+                            <li className="menu nav-item">
+                                <button
+                                    type="button"
+                                    className={`${currentMenu === 'task-management' ? 'active' : ''} nav-link group w-full`}
+                                    onClick={() => toggleMenu('task-management')}
+                                >
                                     <div className="flex items-center">
                                         <IconMenuApps className="shrink-0 group-hover:!text-primary" />
                                         <span className="text-black ltr:pl-3 rtl:pr-3 dark:text-[#506690] dark:group-hover:text-white-dark">{t('task_management')}</span>
+                                    </div>
+
+                                    <div className={currentMenu !== 'task-management' ? '-rotate-90 rtl:rotate-90' : ''}>
+                                        <IconCaretDown />
+                                    </div>
+                                </button>
+
+                                <AnimateHeight duration={300} height={currentMenu === 'task-management' ? 'auto' : 0}>
+                                    <ul className="sub-menu text-gray-500">
+                                        <li>
+                                            <Link href="/apps/task-management">Overview</Link>
+                                        </li>
+                                        <li>
+                                            <Link href="/apps/task-management?newProject=1">+ New Project</Link>
+                                        </li>
+                                        <li className="mt-2 mb-1 text-[11px] font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">Projects</li>
+                                        {!projects.length ? <li className="px-2 py-1 text-xs text-slate-400">Memuat / belum ada project</li> : null}
+                                        {projects.map((p) => (
+                                            <li key={p.id}>
+                                                <Link
+                                                    href={`/apps/task-management?projectId=${p.id}`}
+                                                    className={`${activeProjectFromQuery === p.id ? '!text-primary font-semibold' : ''}`}
+                                                >
+                                                    {p.name}
+                                                </Link>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </AnimateHeight>
+                            </li>
+
+                            {/* ADMIN MEMBER */}
+                            <li className="nav-item">
+                                <Link href="/admin/members" className="group">
+                                    <div className="flex items-center">
+                                        <IconUsers className="shrink-0 group-hover:!text-primary" />
+                                        <span className="text-black ltr:pl-3 rtl:pr-3 dark:text-[#506690] dark:group-hover:text-white-dark">Admin Member</span>
                                     </div>
                                 </Link>
                             </li>
