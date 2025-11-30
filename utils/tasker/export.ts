@@ -33,6 +33,19 @@ export const buildTimesheetRows = (
     getTrackedSeconds: (task: BoardTask) => number,
     options?: TimesheetExportOptions,
 ) => {
+    type MemberRow = {
+        Month: string;
+        Project: string;
+        Member: string;
+        TrackedSeconds: number;
+        TrackedHours: string;
+        HourlyRate: number;
+        Nominal: number;
+        NominalFormatted: string;
+        AdminCommission: number;
+        AdminCommissionFormatted: string;
+    };
+
     const ADMIN_COMMISSION_PER_HOUR = 10_000;
     const assigneeFilter = options?.assigneeFilter ?? 'all';
     const defaultHourlyRate = options?.hourlyRate ?? 0;
@@ -125,16 +138,17 @@ export const buildTimesheetRows = (
         });
     });
 
-    const rowsMembers = Array.from(byMember.entries()).map(([member, payload]) => {
+    const rowsMembers: MemberRow[] = Array.from(byMember.entries()).map(([member, payload]) => {
         const hours = payload.secs / 3600;
         const commission = hours * ADMIN_COMMISSION_PER_HOUR;
+        const hourlyRate = hours > 0 ? payload.nominal / hours : defaultHourlyRate;
         return {
             Month: options?.month ?? 'All',
             Project: project.name,
             Member: member,
             TrackedSeconds: payload.secs,
             TrackedHours: hours.toFixed(2),
-            HourlyRate: Math.round(rowsMembers.length ? payload.nominal / hours : defaultHourlyRate),
+            HourlyRate: Math.round(hourlyRate),
             Nominal: Math.round(payload.nominal),
             NominalFormatted: formatCurrencyIdr(payload.nominal),
             AdminCommission: Math.round(commission),
@@ -147,13 +161,14 @@ export const buildTimesheetRows = (
         const totalHours = totalSeconds / 3600;
         const totalCommission = totalHours * ADMIN_COMMISSION_PER_HOUR;
         const totalNominal = rowsMembers.reduce((acc, r) => acc + (Number.isFinite(r.Nominal) ? r.Nominal : 0), 0);
+        const effectiveHourly = totalHours > 0 ? totalNominal / totalHours : defaultHourlyRate;
         rowsMembers.push({
             Month: options?.month ?? 'All',
             Project: project.name,
             Member: 'TOTAL',
             TrackedSeconds: Math.round(totalSeconds),
             TrackedHours: totalHours.toFixed(2),
-            HourlyRate: hourlyRate,
+            HourlyRate: Math.round(effectiveHourly),
             Nominal: Math.round(totalNominal),
             NominalFormatted: formatCurrencyIdr(totalNominal),
             AdminCommission: Math.round(totalCommission),
