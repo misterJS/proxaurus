@@ -8,8 +8,10 @@ import { useBoardData } from '@/hooks/tasker/useBoardData';
 import { useTaskTimer } from '@/hooks/tasker/useTaskTimer';
 import { exportTimesheetXLSX } from '@/utils/tasker/export';
 import { rpc } from '@/services/tasker/rpc';
+import { updateProjectArchive } from '@/services/tasker/projects';
 import { deleteTask, insertTask, updateTask, removeAssignee, addAssignee } from '@/services/tasker/tasks';
 import { BoardTask, Member } from '@/types/tasker';
+import IconArchive from '@/components/icon/icon-archive';
 import IconPlus from '@/components/icon/icon-plus';
 import IconLayoutGrid from '@/components/icon/icon-layout-grid';
 import IconLayout from '@/components/icon/icon-layout';
@@ -20,6 +22,7 @@ import NewFlowModal from '@/components/tasker/modals/NewFlowModal';
 import NewTaskModal from '@/components/tasker/modals/NewTaskModal';
 import EditTaskModal from '@/components/tasker/modals/EditTaskModal';
 import ExportConfirmationModal from '@/components/tasker/modals/ExportConfirmationModal';
+import IconRestore from '@/components/icon/icon-restore';
 
 export default function ComponentsAppsTaskManagement() {
     const { userId, loading: userLoading, error: userError } = useAuthUser();
@@ -42,6 +45,10 @@ export default function ComponentsAppsTaskManagement() {
     const [selectedMonth, setSelectedMonth] = useState<string>(defaultMonth);
     const [selectedAssignee, setSelectedAssignee] = useState<'all' | 'unassigned' | string>('all');
     const [hourlyRate, setHourlyRate] = useState<number>(50000);
+    const [projectActionError, setProjectActionError] = useState<string | null>(null);
+    const [showArchivedList, setShowArchivedList] = useState(false);
+    const [showActionsMobile, setShowActionsMobile] = useState(false);
+    const [showFilterMobile, setShowFilterMobile] = useState(false);
 
     const [editingTask, setEditingTask] = useState<BoardTask | null>(null);
 
@@ -50,6 +57,8 @@ export default function ComponentsAppsTaskManagement() {
         setEditOpen(true);
     };
 
+    const archivedProjects = useMemo(() => projects.filter((p) => p.archived), [projects]);
+    const activeProjects = useMemo(() => projects.filter((p) => !p.archived), [projects]);
     const summary = useMemo(() => ({ tasks: activeProject ? activeProject.flows.reduce((a, f) => a + f.tasks.length, 0) : 0 }), [activeProject]);
     const formatCurrencyIdr = (value: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(Math.round(value));
     const activeRole = activeProject ? myRoles[activeProject.id] ?? 'member' : 'member';
@@ -73,6 +82,14 @@ export default function ComponentsAppsTaskManagement() {
             router.replace(`/apps/task-management${query}`);
         }
     }, [searchParams, userId, router]);
+
+    useEffect(() => {
+        if (activeProject?.archived) {
+            const fallback = activeProjects[0];
+            setActiveProjectId(fallback?.id ?? null);
+            setActiveColumnId(fallback?.flows[0]?.id ?? null);
+        }
+    }, [activeProject, activeProjects, setActiveProjectId, setActiveColumnId]);
 
     const monthlySummary = useMemo(() => {
         if (!activeProject) return { tasks: 0, seconds: 0, nominal: 0 };
@@ -178,18 +195,52 @@ export default function ComponentsAppsTaskManagement() {
     };
 
     const handleExport = () => {
-        if (!canExport) return;
+        if (!canExport || !activeProject || activeProject.archived) return;
         setExportConfirmOpen(true);
     };
 
     const handleConfirmExport = () => {
-        if (!canExport) return;
-        if (activeProject)
-            exportTimesheetXLSX(activeProject, getTrackedSeconds, {
-                month: selectedMonth,
-                assigneeFilter: selectedAssignee,
-                hourlyRate,
-            });
+        if (!canExport || !activeProject || activeProject.archived) return;
+        exportTimesheetXLSX(activeProject, getTrackedSeconds, {
+            month: selectedMonth,
+            assigneeFilter: selectedAssignee,
+            hourlyRate,
+        });
+    };
+
+    const handleArchiveToggle = (projectId: string, archived: boolean) => {
+        setProjectActionError(null);
+        const prevProjects = projects;
+        let nextActiveId = activeProjectId;
+        let nextActiveColumn = activeColumnId;
+
+        if (archived && activeProjectId === projectId) {
+            const fallback = projects.find((p) => !p.archived && p.id !== projectId);
+            nextActiveId = fallback?.id ?? null;
+            nextActiveColumn = fallback?.flows[0]?.id ?? null;
+            setActiveProjectId(nextActiveId);
+            setActiveColumnId(nextActiveColumn);
+        } else if (!archived && !activeProjectId) {
+            const restored = projects.find((p) => p.id === projectId);
+            nextActiveId = projectId;
+            nextActiveColumn = restored?.flows[0]?.id ?? null;
+            setActiveProjectId(projectId);
+            setActiveColumnId(nextActiveColumn);
+        }
+
+        setProjects((prev) => prev.map((p) => (p.id === projectId ? { ...p, archived } : p)));
+
+        startMutate(async () => {
+            const { error } = await updateProjectArchive(projectId, archived);
+            if (error) {
+                setProjectActionError(error.message);
+                setProjects(prevProjects);
+                setActiveProjectId(activeProjectId);
+                setActiveColumnId(activeColumnId);
+                return;
+            }
+            await loadProjects(nextActiveId, { silent: true });
+        });
     };
 
     return (
@@ -199,36 +250,10 @@ export default function ComponentsAppsTaskManagement() {
                     <div className="space-y-2">
                         <div className="flex flex-wrap items-center gap-3">
                             <h1 className="text-2xl font-semibold text-slate-900 dark:text-white">Task Management</h1>
-                            <div className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-1 text-sm font-semibold text-slate-700 shadow-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200">
-                                <span>Project</span>
-                                <select
-                                    className="form-select h-9 border-slate-200 text-sm dark:border-slate-700"
-                                    value={activeProjectId ?? ''}
-                                    onChange={(e) => {
-                                        const pid = e.target.value || null;
-                                        setActiveProjectId(pid);
-                                        const p = projects.find((p) => p.id === pid);
-                                        setActiveColumnId(p?.flows[0]?.id ?? null);
-                                    }}
-                                >
-                                    {projects.map((p) => (
-                                        <option key={p.id} value={p.id}>
-                                            {p.name}
-                                        </option>
-                                    ))}
-                                </select>
-                                <button
-                                    type="button"
-                                    onClick={() => setProjectOpen(true)}
-                                    className="rounded-md border border-dashed border-primary/40 px-2 py-1 text-xs font-semibold text-primary hover:bg-primary/10"
-                                >
-                                    + Project
-                                </button>
-                            </div>
                         </div>
                         <p className="text-sm text-slate-500 dark:text-slate-400">Kelola projects, flows, tasks, dan member.</p>
                     </div>
-                    <div className="flex w-full flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end lg:max-w-3xl">
+                    <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-col lg:flex-row lg:flex-wrap lg:justify-end lg:gap-3">
                         <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center sm:justify-end">
                             <div className="inline-flex w-full items-center justify-center rounded-xl border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 shadow-sm dark:border-slate-700 dark:text-slate-300 sm:w-auto">{summary.tasks} tasks</div>
                             <div className="flex w-full items-stretch gap-1 rounded-xl border border-slate-200 bg-white p-1 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:w-auto">
@@ -260,20 +285,55 @@ export default function ComponentsAppsTaskManagement() {
                                 </button>
                             </div>
                         </div>
-                        <div className="grid w-full gap-3 sm:w-auto sm:grid-cols-2 md:grid-cols-3 lg:flex lg:flex-wrap lg:justify-end lg:gap-3">
+                        <div className="sm:hidden">
+                            <button
+                                type="button"
+                                onClick={() => setShowActionsMobile((v) => !v)}
+                                className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-600 shadow-sm transition hover:border-primary/40 hover:text-primary dark:border-slate-600 dark:text-slate-300"
+                            >
+                                {showActionsMobile ? 'Sembunyikan aksi' : 'Tampilkan aksi'}
+                            </button>
+                        </div>
+                        <div
+                            className={`grid w-full grid-cols-2 gap-2 sm:w-auto sm:grid-cols-3 lg:flex lg:flex-wrap lg:justify-end lg:gap-3 ${
+                                showActionsMobile ? '' : 'hidden sm:grid'
+                            }`}
+                        >
                             <button
                                 type="button"
                                 onClick={handleExport}
-                                disabled={!activeProject || !canExport}
-                                className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:border-primary/40 hover:text-primary dark:border-slate-600 dark:text-slate-300 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
-                                title={!canExport ? 'Hanya admin/owner yang dapat export' : 'Export laporan'}
+                                disabled={!activeProject || !canExport || activeProject.archived}
+                                className="col-span-2 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:border-primary/40 hover:text-primary dark:border-slate-600 dark:text-slate-300 disabled:cursor-not-allowed disabled:opacity-60 sm:col-span-1 sm:w-auto"
+                                title={
+                                    !activeProject
+                                        ? 'Pilih project aktif'
+                                        : activeProject.archived
+                                        ? 'Project terarsip tidak bisa di-export'
+                                        : !canExport
+                                        ? 'Hanya admin/owner yang dapat export'
+                                        : 'Export laporan'
+                                }
                             >
                                 Export
                             </button>
                             <button
                                 type="button"
+                                onClick={() => activeProject && handleArchiveToggle(activeProject.id, !activeProject.archived)}
+                                disabled={!activeProject}
+                                className={`col-span-2 inline-flex w-full items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition sm:col-span-1 sm:w-auto ${
+                                    activeProject?.archived
+                                        ? 'border border-amber-200 text-amber-700 hover:bg-amber-50 dark:border-amber-500/40 dark:text-amber-200 dark:hover:bg-amber-500/10'
+                                        : 'border border-slate-300 text-slate-600 hover:border-primary/40 hover:text-primary dark:border-slate-600 dark:text-slate-300'
+                                } disabled:cursor-not-allowed disabled:opacity-60`}
+                                title={activeProject?.archived ? 'Pulihkan project ke daftar aktif' : 'Arsipkan project ini'}
+                            >
+                                {activeProject?.archived ? <IconRestore className="h-4 w-4" /> : <IconArchive className="h-4 w-4" />}
+                                {activeProject?.archived ? 'Unarchive' : 'Archive'}
+                            </button>
+                            <button
+                                type="button"
                                 onClick={() => setMembersOpen(true)}
-                                className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 px-4 py-2 text-sm font-semibold text-slate-500 transition hover:border-primary/40 hover:text-primary dark:border-slate-600 dark:text-slate-400 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+                                className="col-span-2 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 px-4 py-2 text-sm font-semibold text-slate-500 transition hover:border-primary/40 hover:text-primary dark:border-slate-600 dark:text-slate-400 disabled:cursor-not-allowed disabled:opacity-60 sm:col-span-1 sm:w-auto"
                             >
                                 <span className="inline-flex">
                                     <IconPlus className="h-4 w-4" />
@@ -283,7 +343,7 @@ export default function ComponentsAppsTaskManagement() {
                             <button
                                 type="button"
                                 onClick={() => setInviteOpen(true)}
-                                className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 px-4 py-2 text-sm font-semibold text-slate-500 transition hover:border-primary/40 hover:text-primary dark:border-slate-600 dark:text-slate-400 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+                                className="col-span-2 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 px-4 py-2 text-sm font-semibold text-slate-500 transition hover:border-primary/40 hover:text-primary dark:border-slate-600 dark:text-slate-400 disabled:cursor-not-allowed disabled:opacity-60 sm:col-span-1 sm:w-auto"
                             >
                                 <IconPlus className="h-4 w-4" />
                                 Invite
@@ -292,7 +352,7 @@ export default function ComponentsAppsTaskManagement() {
                                 type="button"
                                 onClick={() => setFlowOpen(true)}
                                 disabled={!activeProject}
-                                className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 px-4 py-2 text-sm font-semibold text-slate-500 transition hover:border-primary/40 hover:text-primary dark:border-slate-600 dark:text-slate-400 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+                                className="col-span-2 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 px-4 py-2 text-sm font-semibold text-slate-500 transition hover:border-primary/40 hover:text-primary dark:border-slate-600 dark:text-slate-400 disabled:cursor-not-allowed disabled:opacity-60 sm:col-span-1 sm:w-auto"
                             >
                                 <IconPlus className="h-4 w-4" />
                                 Flow baru
@@ -301,7 +361,7 @@ export default function ComponentsAppsTaskManagement() {
                                 type="button"
                                 onClick={() => setTaskOpen(true)}
                                 disabled={!activeColumnId || !activeProject}
-                                className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-primary/25 transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
+                                className="col-span-2 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-primary/25 transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60 sm:col-span-1 sm:w-auto"
                             >
                                 <IconPlus className="h-5 w-5" />
                                 Task baru
@@ -309,49 +369,117 @@ export default function ComponentsAppsTaskManagement() {
                         </div>
                     </div>
                 </div>
-                <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800">
-                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                        <label className="space-y-2 text-sm font-medium text-slate-700 dark:text-slate-200">
-                            <span className="block text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Bulan</span>
-                            <input
-                                type="month"
-                                value={selectedMonth}
-                                onChange={(e) => setSelectedMonth(e.target.value)}
-                                className="form-input w-full"
-                            />
-                        </label>
-                        <label className="space-y-2 text-sm font-medium text-slate-700 dark:text-slate-200">
-                            <span className="block text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Filter User</span>
-                            <select
-                                value={selectedAssignee}
-                                onChange={(e) => setSelectedAssignee(e.target.value)}
-                                className="form-select w-full"
+                {projectActionError ? (
+                    <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-600 dark:border-rose-500/40 dark:bg-rose-500/10 dark:text-rose-200">
+                        {projectActionError}
+                    </div>
+                ) : null}
+                {archivedProjects.length ? (
+                    <div className="rounded-2xl border border-dashed border-amber-200 bg-amber-50/60 p-4 text-sm text-amber-800 shadow-sm dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100">
+                        <div className="flex items-center justify-between gap-3">
+                            <div>
+                                <p className="text-sm font-semibold">Archived Projects ({archivedProjects.length})</p>
+                                <p className="text-xs text-amber-700/80 dark:text-amber-200/80">Restore untuk munculkan lagi di dashboard & export.</p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setShowArchivedList((v) => !v)}
+                                className="rounded-md px-3 py-1 text-xs font-semibold transition hover:bg-amber-100/60 dark:hover:bg-amber-500/20"
                             >
-                                <option value="all">Semua user</option>
-                                <option value="unassigned">Tanpa assignee</option>
-                                {(activeProject?.members ?? []).map((m) => (
-                                    <option key={m.userId} value={m.userId}>
-                                        {m.fullName || m.email || m.userId}
-                                    </option>
-                                ))}
-                            </select>
-                        </label>
-                        <label className="space-y-2 text-sm font-medium text-slate-700 dark:text-slate-200">
-                            <span className="block text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Tarif / jam (IDR)</span>
-                            <input
-                                type="number"
-                                min={0}
-                                value={hourlyRate}
-                                onChange={(e) => setHourlyRate(Number(e.target.value) || 0)}
-                                className="form-input w-full"
-                            />
-                        </label>
-                        <div className="flex flex-col justify-center rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-700 shadow-inner dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100">
+                                {showArchivedList ? 'Sembunyikan' : 'Lihat daftar'}
+                            </button>
+                        </div>
+                        {showArchivedList ? (
+                            <ul className="mt-3 space-y-2">
+                                {archivedProjects.map((p) => {
+                                    const taskCount = p.flows.reduce((a, f) => a + f.tasks.length, 0);
+                                    return (
+                                        <li
+                                            key={p.id}
+                                            className="flex items-center justify-between rounded-lg border border-amber-200 bg-white/80 px-3 py-2 text-amber-800 dark:border-amber-500/30 dark:bg-slate-900 dark:text-amber-100"
+                                        >
+                                            <div>
+                                                <p className="font-semibold">{p.name}</p>
+                                                <p className="text-xs text-amber-700/80 dark:text-amber-200/80">
+                                                    {taskCount} task{taskCount === 1 ? '' : 's'}
+                                                </p>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                onClick={() => handleArchiveToggle(p.id, false)}
+                                                className="inline-flex items-center gap-1 rounded-md border border-amber-300 px-3 py-1 text-xs font-semibold text-amber-800 transition hover:bg-amber-100 dark:border-amber-500/40 dark:text-amber-100 dark:hover:bg-amber-500/20"
+                                            >
+                                                <IconRestore className="h-4 w-4" />
+                                                Restore
+                                            </button>
+                                        </li>
+                                    );
+                                })}
+                            </ul>
+                        ) : null}
+                    </div>
+                ) : null}
+                <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+                    <div className="flex items-center justify-between sm:hidden">
+                        <div className="flex flex-col">
                             <span className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Nominal bulan ini</span>
-                            <span className="text-lg font-semibold">{formatCurrencyIdr(monthlySummary.nominal)}</span>
+                            <span className="text-lg font-semibold text-slate-800 dark:text-slate-50">{formatCurrencyIdr(monthlySummary.nominal)}</span>
                             <span className="text-xs text-slate-500 dark:text-slate-400">
                                 {monthlySummary.tasks} task | {(monthlySummary.seconds / 3600).toFixed(1)} jam
                             </span>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => setShowFilterMobile((v) => !v)}
+                            className="rounded-md border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600 transition hover:border-primary/40 hover:text-primary dark:border-slate-700 dark:text-slate-200"
+                        >
+                            {showFilterMobile ? 'Sembunyikan' : 'Filter'}
+                        </button>
+                    </div>
+                    <div className={`${showFilterMobile ? 'block' : 'hidden'} sm:block`}>
+                        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                            <label className="space-y-2 text-sm font-medium text-slate-700 dark:text-slate-200">
+                                <span className="block text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Bulan</span>
+                                <input
+                                    type="month"
+                                    value={selectedMonth}
+                                    onChange={(e) => setSelectedMonth(e.target.value)}
+                                    className="form-input w-full"
+                                />
+                            </label>
+                            <label className="space-y-2 text-sm font-medium text-slate-700 dark:text-slate-200">
+                                <span className="block text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Filter User</span>
+                                <select
+                                    value={selectedAssignee}
+                                    onChange={(e) => setSelectedAssignee(e.target.value)}
+                                    className="form-select w-full"
+                                >
+                                    <option value="all">Semua user</option>
+                                    <option value="unassigned">Tanpa assignee</option>
+                                    {(activeProject?.members ?? []).map((m) => (
+                                        <option key={m.userId} value={m.userId}>
+                                            {m.fullName || m.email || m.userId}
+                                        </option>
+                                    ))}
+                                </select>
+                            </label>
+                            <label className="space-y-2 text-sm font-medium text-slate-700 dark:text-slate-200">
+                                <span className="block text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Tarif / jam (IDR)</span>
+                                <input
+                                    type="number"
+                                    min={0}
+                                    value={hourlyRate}
+                                    onChange={(e) => setHourlyRate(Number(e.target.value) || 0)}
+                                    className="form-input w-full"
+                                />
+                            </label>
+                            <div className="hidden flex-col justify-center rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-700 shadow-inner sm:flex dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100">
+                                <span className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Nominal bulan ini</span>
+                                <span className="text-lg font-semibold">{formatCurrencyIdr(monthlySummary.nominal)}</span>
+                                <span className="text-xs text-slate-500 dark:text-slate-400">
+                                    {monthlySummary.tasks} task | {(monthlySummary.seconds / 3600).toFixed(1)} jam
+                                </span>
+                            </div>
                         </div>
                     </div>
                 </div>

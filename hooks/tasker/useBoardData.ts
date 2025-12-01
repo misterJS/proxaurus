@@ -29,6 +29,7 @@ export const useBoardData = (ownerId: string | null) => {
         let normalized: BoardProject[] = (data ?? []).map((project: any) => ({
             id: project.id,
             name: project.name,
+            archived: !!project.archived,
             flows: Array.isArray(project.flows)
                 ? project.flows
                       .map((flow: any) => ({
@@ -97,7 +98,7 @@ export const useBoardData = (ownerId: string | null) => {
             setActiveProjectId(null);
             setActiveColumnId(null);
         } else {
-            const chosen = normalized.find((p) => p.id === (preferredProject ?? activeProjectId)) ?? normalized[0];
+            const chosen = normalized.find((p) => p.id === (preferredProject ?? activeProjectId)) ?? normalized.find((p) => !p.archived) ?? normalized[0];
             setActiveProjectId(chosen.id);
             setActiveColumnId(chosen.flows[0]?.id ?? null);
         }

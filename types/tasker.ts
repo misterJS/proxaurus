@@ -47,6 +47,7 @@ export type BoardProject = {
     name: string;
     flows: BoardFlow[];
     members?: Member[];
+    archived?: boolean;
 };
 
 export type TaskFormState = {

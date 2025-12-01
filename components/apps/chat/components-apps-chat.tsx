@@ -1,5 +1,6 @@
 'use client';
 import Dropdown from '@/components/dropdown';
+import IconArchive from '@/components/icon/icon-archive';
 import IconBell from '@/components/icon/icon-bell';
 import IconCamera from '@/components/icon/icon-camera';
 import IconCopy from '@/components/icon/icon-copy';
@@ -21,6 +22,7 @@ import IconShare from '@/components/icon/icon-share';
 import IconTrashLines from '@/components/icon/icon-trash-lines';
 import IconUserPlus from '@/components/icon/icon-user-plus';
 import IconVideo from '@/components/icon/icon-video';
+import IconRestore from '@/components/icon/icon-restore';
 import PerfectScrollbar from 'react-perfect-scrollbar';
 import { IRootState } from '@/store';
 import React, { useEffect, useState } from 'react';
@@ -247,6 +249,8 @@ const contactList = [
         active: true,
     },
 ];
+
+const initialContacts = contactList.map((contact) => ({ ...contact, archived: false }));
 const loginUser = {
     id: 0,
     name: 'Alon Smith',
@@ -258,20 +262,25 @@ const ComponentsAppsChat = () => {
     const isRtl = useSelector((state: IRootState) => state.themeConfig.rtlClass) === 'rtl';
     const isDark = useSelector((state: IRootState) => state.themeConfig.theme === 'dark' || state.themeConfig.isDarkMode);
 
+    const [contacts, setContacts] = useState<any[]>(initialContacts);
     const [isShowChatMenu, setIsShowChatMenu] = useState(false);
     const [searchUser, setSearchUser] = useState('');
+    const [showArchived, setShowArchived] = useState(false);
     const [isShowUserChat, setIsShowUserChat] = useState(false);
     const [selectedUser, setSelectedUser] = useState<any>(null);
     const [textMessage, setTextMessage] = useState('');
-    const [filteredItems, setFilteredItems] = useState<any>(contactList);
+    const [filteredItems, setFilteredItems] = useState<any>(initialContacts.filter((contact) => !contact.archived));
+    const archivedCount = contacts.filter((contact) => contact.archived).length;
 
     useEffect(() => {
-        setFilteredItems(() => {
-            return contactList.filter((d) => {
-                return d.name.toLowerCase().includes(searchUser.toLowerCase());
-            });
-        });
-    }, [searchUser]);
+        setFilteredItems(() =>
+            contacts.filter((d) => {
+                const matchesSearch = d.name.toLowerCase().includes(searchUser.toLowerCase());
+                const matchesArchive = showArchived ? d.archived : !d.archived;
+                return matchesSearch && matchesArchive;
+            }),
+        );
+    }, [contacts, searchUser, showArchived]);
 
     const scrollToBottom = () => {
         if (isShowUserChat) {
@@ -283,25 +292,63 @@ const ComponentsAppsChat = () => {
         }
     };
     const selectUser = (user: any) => {
-        setSelectedUser(user);
+        const matchedUser = contacts.find((d) => d.userId === user.userId) || user;
+        setSelectedUser(matchedUser);
         setIsShowUserChat(true);
         scrollToBottom();
         setIsShowChatMenu(false);
     };
     const sendMessage = () => {
-        if (textMessage.trim()) {
-            let list = contactList;
-            let user: any = list.find((d) => d.userId === selectedUser.userId);
-            user.messages.push({
-                fromUserId: selectedUser.userId,
-                toUserId: 0,
-                text: textMessage,
-                time: 'Just now',
-            });
-            setFilteredItems(list);
-            setTextMessage('');
-            scrollToBottom();
+        const trimmedMessage = textMessage.trim();
+        if (!trimmedMessage || !selectedUser) {
+            return;
         }
+        const targetId = selectedUser.userId;
+        const newMessage = {
+            fromUserId: selectedUser.userId,
+            toUserId: 0,
+            text: trimmedMessage,
+            time: 'Just now',
+        };
+        setContacts((prev) =>
+            prev.map((contact) => {
+                if (contact.userId === targetId) {
+                    return { ...contact, messages: [...contact.messages, newMessage], preview: newMessage.text, time: newMessage.time };
+                }
+                return contact;
+            }),
+        );
+        setSelectedUser((prev: any) => {
+            if (prev && prev.userId === targetId) {
+                return { ...prev, messages: [...prev.messages, newMessage], preview: newMessage.text, time: newMessage.time };
+            }
+            return prev;
+        });
+        setTextMessage('');
+        scrollToBottom();
+    };
+
+    const toggleArchiveSelected = () => {
+        if (!selectedUser) {
+            return;
+        }
+        const targetId = selectedUser.userId;
+        const nextArchived = !selectedUser.archived;
+        setContacts((prev) =>
+            prev.map((contact) => {
+                if (contact.userId === targetId) {
+                    return { ...contact, archived: nextArchived };
+                }
+                return contact;
+            }),
+        );
+        setSelectedUser((prev: any) => {
+            if (prev && prev.userId === targetId) {
+                return { ...prev, archived: nextArchived };
+            }
+            return prev;
+        });
+        setShowArchived(nextArchived);
     };
     const sendMessageHandle = (event: any) => {
         if (event.key === 'Enter') {
@@ -359,10 +406,18 @@ const ComponentsAppsChat = () => {
                             <IconSearch />
                         </div>
                     </div>
-                    <div className="flex items-center justify-between text-xs">
-                        <button type="button" className="hover:text-primary">
+                    <div className="grid grid-cols-2 gap-2 text-xs sm:grid-cols-5">
+                        <button type="button" className={`hover:text-primary ${!showArchived ? 'text-primary font-semibold' : ''}`} onClick={() => setShowArchived(false)}>
                             <IconMessagesDot className="mx-auto mb-1" />
                             Chats
+                        </button>
+
+                        <button type="button" className={`hover:text-primary ${showArchived ? 'text-primary font-semibold' : ''}`} onClick={() => setShowArchived(true)}>
+                            <IconArchive className="mx-auto mb-1" />
+                            <span className="flex items-center justify-center gap-1">
+                                <span>Archived</span>
+                                {archivedCount ? <span className="rounded-full bg-primary/10 px-1 text-[10px] font-semibold text-primary">{archivedCount}</span> : null}
+                            </span>
                         </button>
 
                         <button type="button" className="hover:text-primary">
@@ -554,7 +609,14 @@ const ComponentsAppsChat = () => {
                                         </div>
                                     </div>
                                     <div className="mx-3">
-                                        <p className="font-semibold">{selectedUser.name}</p>
+                                        <div className="flex items-center gap-2">
+                                            <p className="font-semibold">{selectedUser.name}</p>
+                                            {selectedUser.archived ? (
+                                                <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-700 dark:bg-amber-500/20 dark:text-amber-200">
+                                                    Archived
+                                                </span>
+                                            ) : null}
+                                        </div>
                                         <p className="text-xs text-white-dark">{selectedUser.active ? 'Active now' : 'Last seen at ' + selectedUser.time}</p>
                                     </div>
                                 </div>
@@ -583,6 +645,16 @@ const ComponentsAppsChat = () => {
                                                     <button type="button">
                                                         <IconCopy className="h-4.5 w-4.5 shrink-0 ltr:mr-2 rtl:ml-2" />
                                                         Copy
+                                                    </button>
+                                                </li>
+                                                <li>
+                                                    <button type="button" onClick={toggleArchiveSelected}>
+                                                        {selectedUser?.archived ? (
+                                                            <IconRestore className="h-4.5 w-4.5 shrink-0 ltr:mr-2 rtl:ml-2" />
+                                                        ) : (
+                                                            <IconArchive className="h-4.5 w-4.5 shrink-0 ltr:mr-2 rtl:ml-2" />
+                                                        )}
+                                                        {selectedUser?.archived ? 'Unarchive chat' : 'Archive chat'}
                                                     </button>
                                                 </li>
                                                 <li>

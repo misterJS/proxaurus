@@ -16,7 +16,9 @@ export default function ProjectSidebar({ projects, activeProjectId, onSelect, on
             <div className="flex items-center justify-between">
                 <div>
                     <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Projects</p>
-                    <p className="text-base font-semibold text-slate-900 dark:text-white">{projects.length} aktif</p>
+                    <p className="text-base font-semibold text-slate-900 dark:text-white">
+                        {projects.length} project{projects.length === 1 ? '' : 's'}
+                    </p>
                 </div>
                 <button
                     type="button"

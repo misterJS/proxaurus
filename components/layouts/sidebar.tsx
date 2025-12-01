@@ -61,9 +61,11 @@ const Sidebar = () => {
             try {
                 const { data, error } = await fetchProjectsSimple();
                 if (error) throw error;
-                setProjects(
-                    (data ?? []).map((p: any) => ({ id: p.id as string, name: p.name as string })).sort((a, b) => a.name.localeCompare(b.name)),
-                );
+                const activeProjects = (data ?? [])
+                    .filter((p: any) => !p.archived)
+                    .map((p: any) => ({ id: p.id as string, name: p.name as string }))
+                    .sort((a, b) => a.name.localeCompare(b.name));
+                setProjects(activeProjects);
             } catch (err) {
                 console.error('Failed to load projects for sidebar', err);
             }

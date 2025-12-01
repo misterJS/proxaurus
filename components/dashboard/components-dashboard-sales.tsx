@@ -47,7 +47,8 @@ export default function ComponentsDashboardSales() {
     const [filterLoading, setFilterLoading] = useState(false);
     const [exportConfirmOpen, setExportConfirmOpen] = useState(false);
 
-    const canExportAll = projects.length > 0 && Object.values(myRoles).some((r) => r === 'owner' || r === 'admin');
+    const activeProjects = useMemo(() => projects.filter((p) => !p.archived), [projects]);
+    const canExportAll = activeProjects.length > 0 && activeProjects.some((p) => myRoles[p.id] === 'owner' || myRoles[p.id] === 'admin');
 
     // Range bulan (UTC) → pakai YYYY-MM-DD string agar aman untuk timestamp/timestamptz
     const monthDateRangeStrings = (ym: string) => {
@@ -62,13 +63,13 @@ export default function ComponentsDashboardSales() {
     // ===== Ambil data bulan dari task_time_entries =====
     useEffect(() => {
         const fetchMonthSeconds = async () => {
-            if (!projects.length) {
+            if (!activeProjects.length) {
                 setMonthSecondsByTask({});
                 return;
             }
             setFilterLoading(true);
             try {
-                const allTaskIds = projects.flatMap((p) => p.flows.flatMap((f) => f.tasks.map((t) => t.id)));
+                const allTaskIds = activeProjects.flatMap((p) => p.flows.flatMap((f) => f.tasks.map((t) => t.id)));
                 if (!allTaskIds.length) {
                     setMonthSecondsByTask({});
                     setFilterLoading(false);
@@ -119,14 +120,14 @@ export default function ComponentsDashboardSales() {
         };
 
         fetchMonthSeconds();
-    }, [projects, month]);
+    }, [activeProjects, month]);
 
     const stats = useMemo(() => {
-        if (!projects.length) {
+        if (!activeProjects.length) {
             return { totalProjects: 0, totalTasks: 0, totalHours: 0, totalCost: 0, projectStats: [] as ProjectStat[] };
         }
 
-        const projectStats: ProjectStat[] = projects.map((project) => {
+        const projectStats: ProjectStat[] = activeProjects.map((project) => {
             const tasks = project.flows.flatMap((flow) => flow.tasks);
             const totalTasks = tasks.length;
 
@@ -186,13 +187,13 @@ export default function ComponentsDashboardSales() {
             };
         });
 
-        const totalProjects = projects.length;
+        const totalProjects = activeProjects.length;
         const totalTasks = projectStats.reduce((s, p) => s + p.totalTasks, 0);
         const totalHours = projectStats.reduce((s, p) => s + p.totalHours, 0);
         const totalCost = projectStats.reduce((s, p) => s + p.totalCost, 0);
 
         return { totalProjects, totalTasks, totalHours, totalCost, projectStats };
-    }, [projects, monthSecondsByTask]);
+    }, [activeProjects, monthSecondsByTask]);
 
     // ===== Utils tampilan =====
     const formatCurrency = (amount: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(amount);
@@ -210,7 +211,7 @@ export default function ComponentsDashboardSales() {
 
     const handleConfirmExportAll = () => {
         if (!canExportAll) return;
-        exportAllProjectsTimesheetXLSX(projects, getTrackedSeconds, { month, hourlyRate: DEFAULT_HOURLY_RATE });
+        exportAllProjectsTimesheetXLSX(activeProjects, getTrackedSeconds, { month, hourlyRate: DEFAULT_HOURLY_RATE });
     };
 
     if (isLoading) {

@@ -6,7 +6,7 @@ export const fetchProjectsRaw = () =>
         .from('projects')
         .select(
             `
-id, name,
+id, name, archived,
 flows ( id, name, position,
 tasks ( id, project_id, flow_id, title, description, priority, due_date, tracked_seconds, created_at, position )
 )
@@ -14,9 +14,9 @@ tasks ( id, project_id, flow_id, title, description, priority, due_date, tracked
         )
         .order('created_at', { ascending: true });
 
-export const insertProject = (name: string, ownerId: string) => supabase.from('projects').insert({ name, owner_id: ownerId }).select('id').single();
+export const insertProject = (name: string, ownerId: string) => supabase.from('projects').insert({ name, owner_id: ownerId, archived: false }).select('id').single();
 
-export const fetchProjectsSimple = () => supabase.from('projects').select('id, name').order('created_at', { ascending: true });
+export const fetchProjectsSimple = () => supabase.from('projects').select('id, name, archived').order('created_at', { ascending: true });
 
 export const fetchMyRoles = (projectIds: string[], userId: string) => supabase.from('project_members').select('project_id, role').in('project_id', projectIds).eq('user_id', userId);
 
@@ -35,3 +35,5 @@ export const insertProjectMember = (payload: { project_id: string; user_id: stri
     supabase.from('project_members').insert({ is_active: true, hourly_rate: null, ...payload }).select('project_id, user_id').single();
 
 export const findUserByEmail = (email: string) => supabase.from('users').select('id, email, full_name').eq('email', email).maybeSingle();
+
+export const updateProjectArchive = (projectId: string, archived: boolean) => supabase.from('projects').update({ archived }).eq('id', projectId);
