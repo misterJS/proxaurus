@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '@/lib/supabase-browser';
 
 type TimerState = {
@@ -96,13 +96,16 @@ export function useTaskTimer() {
   }, []);
 
   // Hitung detik berjalan untuk task tertentu (buat render UI)
-  const getTrackedSeconds = (task: { id: string; trackedSeconds: number }) => {
-    if (timer.taskId === task.id && timer.startedAt) {
-      const elapsed = Math.max(0, Math.floor((Date.now() - timer.startedAt) / 1000));
-      return timer.initialSeconds + elapsed;
-    }
-    return task.trackedSeconds;
-  };
+  const getTrackedSeconds = useCallback(
+    (task: { id: string; trackedSeconds: number }) => {
+      if (timer.taskId === task.id && timer.startedAt) {
+        const elapsed = Math.max(0, Math.floor((Date.now() - timer.startedAt) / 1000));
+        return timer.initialSeconds + elapsed;
+      }
+      return task.trackedSeconds;
+    },
+    [timer.initialSeconds, timer.startedAt, timer.taskId],
+  );
 
   // Start timer
   const start = async (taskId: string, initialSeconds: number, onError?: (msg: string) => void) => {

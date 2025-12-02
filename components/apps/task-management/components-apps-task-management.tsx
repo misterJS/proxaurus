@@ -1,5 +1,5 @@
 ﻿'use client';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import BoardColumn from '@/components/tasker/BoardColumn';
 import TaskListView from '@/components/tasker/TaskListView';
@@ -64,6 +64,116 @@ export default function ComponentsAppsTaskManagement() {
     const activeRole = activeProject ? myRoles[activeProject.id] ?? 'member' : 'member';
     const canExport = activeRole === 'owner' || activeRole === 'admin';
 
+    const allTasks = useMemo(() => activeProject?.flows.flatMap((f) => f.tasks) ?? [], [activeProject]);
+    const taskMap = useMemo(() => {
+        const map = new Map<string, BoardTask>();
+        allTasks.forEach((t) => map.set(t.id, t));
+        return map;
+    }, [allTasks]);
+
+    const monthRange = useMemo(() => {
+        const [year, monthStr] = selectedMonth.split('-').map((v) => Number(v));
+        const validMonth = !Number.isNaN(year) && !Number.isNaN(monthStr) && monthStr >= 1 && monthStr <= 12;
+        const fallbackStart = new Date();
+        fallbackStart.setUTCDate(1);
+        fallbackStart.setUTCHours(0, 0, 0, 0);
+        const start = validMonth ? new Date(Date.UTC(year, monthStr - 1, 1)) : fallbackStart;
+        const end = new Date(start);
+        end.setUTCMonth(start.getUTCMonth() + 1);
+        return { start, end };
+    }, [selectedMonth]);
+
+    const memberRates = useMemo(() => {
+        const map = new Map<string, number>();
+        (activeProject?.members ?? []).forEach((m) => {
+            if (typeof m.hourlyRate === 'number') map.set(m.userId, m.hourlyRate);
+        });
+        return map;
+    }, [activeProject]);
+
+    const resolveRate = useCallback(
+        (userId: string | null | undefined) => {
+            if (!userId) return hourlyRate || 0;
+            return memberRates.get(userId) ?? (hourlyRate || 0);
+        },
+        [memberRates, hourlyRate],
+    );
+
+    const isTaskIncluded = useCallback(
+        (task: BoardTask) => {
+            const created = new Date(task.createdAt);
+            const inMonth = created >= monthRange.start && created < monthRange.end;
+            if (!inMonth) return false;
+            if (selectedAssignee === 'all') return true;
+            if (selectedAssignee === 'unassigned') return !(task.assignees?.length);
+            return task.assignees?.some((a) => a.userId === selectedAssignee) ?? false;
+        },
+        [monthRange, selectedAssignee],
+    );
+
+    const normalizeAssignees = useCallback(
+        (task: BoardTask) =>
+            task.assignees?.length
+                ? task.assignees
+                : [{ userId: 'unassigned', fullName: 'Unassigned', email: null, avatarUrl: null }],
+        [],
+    );
+
+    const computeTaskNominal = useCallback(
+        (task: BoardTask, seconds: number) => {
+            const normalizedAssignees = normalizeAssignees(task);
+            const relevantAssignees =
+                selectedAssignee === 'all'
+                    ? normalizedAssignees
+                    : normalizedAssignees.filter((a) => (selectedAssignee === 'unassigned' ? a.userId === 'unassigned' : a.userId === selectedAssignee));
+
+            if (!relevantAssignees.length) return 0;
+
+            const shareSeconds = selectedAssignee === 'all' && normalizedAssignees.length ? seconds / normalizedAssignees.length : seconds;
+
+            return relevantAssignees.reduce((sum, member) => sum + (shareSeconds / 3600) * resolveRate(member.userId), 0);
+        },
+        [normalizeAssignees, resolveRate, selectedAssignee],
+    );
+
+    const filteredTasks = useMemo(() => allTasks.filter((task) => isTaskIncluded(task)), [allTasks, isTaskIncluded]);
+
+    const baseMonthlySummary = useMemo(() => {
+        if (!activeProject) return { tasks: 0, seconds: 0, nominal: 0 };
+        let seconds = 0;
+        let nominal = 0;
+
+        filteredTasks.forEach((task) => {
+            const secs = task.trackedSeconds || 0;
+            seconds += secs;
+            nominal += computeTaskNominal(task, secs);
+        });
+
+        return { tasks: filteredTasks.length, seconds, nominal };
+    }, [activeProject, filteredTasks, computeTaskNominal]);
+
+    const runningAdjustment = (() => {
+        if (!timer.taskId || !timer.startedAt) return { seconds: 0, nominal: 0 };
+        const runningTask = taskMap.get(timer.taskId);
+        if (!runningTask || !isTaskIncluded(runningTask)) return { seconds: 0, nominal: 0 };
+
+        const elapsed = Math.max(0, Math.floor((Date.now() - timer.startedAt) / 1000));
+        if (!elapsed) return { seconds: 0, nominal: 0 };
+
+        const baseSeconds = typeof runningTask.trackedSeconds === 'number' ? runningTask.trackedSeconds : timer.initialSeconds || 0;
+        const nextSeconds = baseSeconds + elapsed;
+        const baseNominal = computeTaskNominal(runningTask, baseSeconds);
+        const nextNominal = computeTaskNominal(runningTask, nextSeconds);
+
+        return { seconds: elapsed, nominal: nextNominal - baseNominal };
+    })();
+
+    const monthlySummary = {
+        tasks: baseMonthlySummary.tasks,
+        seconds: baseMonthlySummary.seconds + runningAdjustment.seconds,
+        nominal: baseMonthlySummary.nominal + runningAdjustment.nominal,
+    };
+
     useEffect(() => {
         const pid = searchParams.get('projectId');
         if (pid && pid !== activeProjectId) {
@@ -90,68 +200,6 @@ export default function ComponentsAppsTaskManagement() {
             setActiveColumnId(fallback?.flows[0]?.id ?? null);
         }
     }, [activeProject, activeProjects, setActiveProjectId, setActiveColumnId]);
-
-    const monthlySummary = useMemo(() => {
-        if (!activeProject) return { tasks: 0, seconds: 0, nominal: 0 };
-        const [year, monthStr] = selectedMonth.split('-').map((v) => Number(v));
-        const validMonth = !Number.isNaN(year) && !Number.isNaN(monthStr) && monthStr >= 1 && monthStr <= 12;
-        const fallbackStart = new Date();
-        fallbackStart.setUTCDate(1);
-        fallbackStart.setUTCHours(0, 0, 0, 0);
-        const start = validMonth ? new Date(Date.UTC(year, monthStr - 1, 1)) : fallbackStart;
-        const end = new Date(start);
-        end.setUTCMonth(start.getUTCMonth() + 1);
-
-        const memberRates = new Map<string, number>();
-        (activeProject.members ?? []).forEach((m) => {
-            if (typeof m.hourlyRate === 'number') memberRates.set(m.userId, m.hourlyRate);
-        });
-        const resolveRate = (userId: string | null | undefined) => {
-            if (!userId) return hourlyRate || 0;
-            return memberRates.get(userId) ?? (hourlyRate || 0);
-        };
-
-        const filtered = activeProject.flows.flatMap((flow) =>
-            flow.tasks.filter((task) => {
-                const created = new Date(task.createdAt);
-                const inMonth = created >= start && created < end;
-                const assigneeMatch =
-                    selectedAssignee === 'all'
-                        ? true
-                        : selectedAssignee === 'unassigned'
-                        ? !task.assignees?.length
-                        : task.assignees?.some((a) => a.userId === selectedAssignee);
-                return inMonth && assigneeMatch;
-            }),
-        );
-
-        const seconds = filtered.reduce((acc, task) => acc + getTrackedSeconds(task), 0);
-        const nominal = filtered.reduce((acc, task) => {
-            const secs = getTrackedSeconds(task);
-            const normalizedAssignees =
-                task.assignees?.length && selectedAssignee !== 'unassigned'
-                    ? task.assignees
-                    : task.assignees?.length
-                    ? task.assignees
-                    : [{ userId: 'unassigned', fullName: 'Unassigned', email: null, avatarUrl: null }];
-
-            const relevantAssignees =
-                selectedAssignee === 'all'
-                    ? normalizedAssignees
-                    : normalizedAssignees.filter((a) => (selectedAssignee === 'unassigned' ? a.userId === 'unassigned' : a.userId === selectedAssignee));
-
-            if (!relevantAssignees.length) return acc;
-
-            const shareSeconds = selectedAssignee === 'all' && normalizedAssignees.length ? secs / normalizedAssignees.length : secs;
-            let taskNominal = 0;
-            relevantAssignees.forEach((member) => {
-                const rate = resolveRate(member.userId);
-                taskNominal += (shareSeconds / 3600) * rate;
-            });
-            return acc + taskNominal;
-        }, 0);
-        return { tasks: filtered.length, seconds, nominal };
-    }, [activeProject, getTrackedSeconds, hourlyRate, selectedAssignee, selectedMonth]);
 
     if (userLoading || isLoading) return <div className="flex min-h-[400px] items-center justify-center text-slate-500">Memuat Task Management...</div>;
     if (userError || error) return <div className="rounded-xl border border-rose-200 bg-rose-50 p-6 text-rose-500 dark:border-rose-400/40 dark:bg-rose-500/10">{userError || error}</div>;
