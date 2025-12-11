@@ -46,6 +46,7 @@ export default function ComponentsAppsTaskManagement() {
     const [selectedAssignee, setSelectedAssignee] = useState<'all' | 'unassigned' | string>('all');
     const [hourlyRate, setHourlyRate] = useState<number>(50000);
     const [projectActionError, setProjectActionError] = useState<string | null>(null);
+    const [timerError, setTimerError] = useState<string | null>(null);
     const [showArchivedList, setShowArchivedList] = useState(false);
     const [showActionsMobile, setShowActionsMobile] = useState(false);
     const [showFilterMobile, setShowFilterMobile] = useState(false);
@@ -62,7 +63,21 @@ export default function ComponentsAppsTaskManagement() {
     const summary = useMemo(() => ({ tasks: activeProject ? activeProject.flows.reduce((a, f) => a + f.tasks.length, 0) : 0 }), [activeProject]);
     const formatCurrencyIdr = (value: number) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(Math.round(value));
     const activeRole = activeProject ? myRoles[activeProject.id] ?? 'member' : 'member';
-    const canExport = activeRole === 'owner' || activeRole === 'admin';
+    const canSeeNominal = useMemo(() => {
+        if (!activeProject || !userId) return true;
+        const me = activeProject.members?.find((m) => m.userId === userId);
+        if (!me) return true;
+        if (me.isActive === false) return false;
+        return me.canSeeNominal ?? true;
+    }, [activeProject, userId]);
+    const canExport = canSeeNominal && (activeRole === 'owner' || activeRole === 'admin');
+    const canUseTimer = useMemo(() => {
+        if (!activeProject || !userId) return true;
+        const me = activeProject.members?.find((m) => m.userId === userId);
+        if (!me) return true;
+        if (me.isActive === false) return false;
+        return me.canUseTimer ?? true;
+    }, [activeProject, userId]);
 
     const allTasks = useMemo(() => activeProject?.flows.flatMap((f) => f.tasks) ?? [], [activeProject]);
     const taskMap = useMemo(() => {
@@ -201,6 +216,12 @@ export default function ComponentsAppsTaskManagement() {
         }
     }, [activeProject, activeProjects, setActiveProjectId, setActiveColumnId]);
 
+    useEffect(() => {
+        if (canUseTimer) {
+            setTimerError(null);
+        }
+    }, [canUseTimer, activeProjectId]);
+
     if (userLoading || isLoading) return <div className="flex min-h-[400px] items-center justify-center text-slate-500">Memuat Task Management...</div>;
     if (userError || error) return <div className="rounded-xl border border-rose-200 bg-rose-50 p-6 text-rose-500 dark:border-rose-400/40 dark:bg-rose-500/10">{userError || error}</div>;
 
@@ -221,6 +242,11 @@ export default function ComponentsAppsTaskManagement() {
     };
 
     const toggleTimer = (taskId: string) => {
+        if (!canUseTimer && timer.taskId !== taskId) {
+            setTimerError('Kamu tidak diizinkan start/stop timer pada project ini.');
+            return;
+        }
+        setTimerError(null);
         const task = activeProject?.flows.flatMap((f) => f.tasks).find((t) => t.id === taskId);
         if (!task) return;
         if (timer.taskId === taskId) {
@@ -357,6 +383,8 @@ export default function ComponentsAppsTaskManagement() {
                                         ? 'Pilih project aktif'
                                         : activeProject.archived
                                         ? 'Project terarsip tidak bisa di-export'
+                                        : !canSeeNominal
+                                        ? 'Akses nominal dimatikan untuk akunmu'
                                         : !canExport
                                         ? 'Hanya admin/owner yang dapat export'
                                         : 'Export laporan'
@@ -422,6 +450,11 @@ export default function ComponentsAppsTaskManagement() {
                         {projectActionError}
                     </div>
                 ) : null}
+                {timerError ? (
+                    <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-500/40 dark:bg-amber-500/10 dark:text-amber-100">
+                        {timerError}
+                    </div>
+                ) : null}
                 {archivedProjects.length ? (
                     <div className="rounded-2xl border border-dashed border-amber-200 bg-amber-50/60 p-4 text-sm text-amber-800 shadow-sm dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100">
                         <div className="flex items-center justify-between gap-3">
@@ -471,7 +504,9 @@ export default function ComponentsAppsTaskManagement() {
                     <div className="flex items-center justify-between sm:hidden">
                         <div className="flex flex-col">
                             <span className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Nominal bulan ini</span>
-                            <span className="text-lg font-semibold text-slate-800 dark:text-slate-50">{formatCurrencyIdr(monthlySummary.nominal)}</span>
+                            <span className="text-lg font-semibold text-slate-800 dark:text-slate-50">
+                                {canSeeNominal ? formatCurrencyIdr(monthlySummary.nominal) : 'Nominal disembunyikan'}
+                            </span>
                             <span className="text-xs text-slate-500 dark:text-slate-400">
                                 {monthlySummary.tasks} task | {(monthlySummary.seconds / 3600).toFixed(1)} jam
                             </span>
@@ -523,7 +558,9 @@ export default function ComponentsAppsTaskManagement() {
                             </label>
                             <div className="hidden flex-col justify-center rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-700 shadow-inner sm:flex dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100">
                                 <span className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Nominal bulan ini</span>
-                                <span className="text-lg font-semibold">{formatCurrencyIdr(monthlySummary.nominal)}</span>
+                                <span className="text-lg font-semibold">
+                                    {canSeeNominal ? formatCurrencyIdr(monthlySummary.nominal) : 'Nominal disembunyikan'}
+                                </span>
                                 <span className="text-xs text-slate-500 dark:text-slate-400">
                                     {monthlySummary.tasks} task | {(monthlySummary.seconds / 3600).toFixed(1)} jam
                                 </span>
@@ -545,6 +582,7 @@ export default function ComponentsAppsTaskManagement() {
                                     onSort={handleSort}
                                     getTrackedSeconds={getTrackedSeconds}
                                     timerTaskId={timer.taskId}
+                                    canUseTimer={canUseTimer}
                                     onEdit={openEditTask}
                                     onToggleTimer={toggleTimer}
                                     onDelete={handleDeleteTask}
@@ -596,6 +634,7 @@ export default function ComponentsAppsTaskManagement() {
                                     projectMembers={activeProject.members ?? []}
                                     getTrackedSeconds={getTrackedSeconds}
                                     timerTaskId={timer.taskId}
+                                    canUseTimer={canUseTimer}
                                     onEdit={openEditTask}
                                     onToggleTimer={toggleTimer}
                                     onDelete={handleDeleteTask}

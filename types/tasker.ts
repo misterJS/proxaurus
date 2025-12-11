@@ -9,6 +9,8 @@ export type Member = {
     role?: ProjectRole;
     isActive?: boolean;
     hourlyRate?: number | null;
+    canUseTimer?: boolean;
+    canSeeNominal?: boolean;
 };
 
 export type TaskActivityKind = 'title_changed' | 'description_changed' | 'due_changed' | 'timer_started' | 'timer_stopped' | 'assignee_added' | 'assignee_removed' | 'reordered';

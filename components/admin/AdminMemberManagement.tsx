@@ -132,6 +132,54 @@ const AdminMemberManagement = () => {
         });
     };
 
+    const handleUpdateTimerAccess = (member: Member, allowTimer: boolean) => {
+        if (!activeProject || !canManageMembers) return;
+        const projectId = activeProject.id;
+        const prev = member.canUseTimer ?? true;
+        setMemberError(null);
+        setMemberActionTarget(member.userId);
+        updateMemberInState(projectId, member.userId, (m) => ({ ...m, canUseTimer: allowTimer }));
+
+        startMutate(async () => {
+            try {
+                const { error: updateErr } = await updateProjectMember(projectId, member.userId, { can_use_timer: allowTimer });
+                if (updateErr) throw updateErr;
+                await loadProjects(projectId, { silent: true });
+            } catch (err) {
+                const message = err instanceof Error ? err.message : 'Gagal mengubah akses timer.';
+                setMemberError(message);
+                updateMemberInState(projectId, member.userId, (m) => ({ ...m, canUseTimer: prev }));
+                await loadProjects(projectId, { silent: true });
+            } finally {
+                setMemberActionTarget(null);
+            }
+        });
+    };
+
+    const handleUpdateNominalAccess = (member: Member, allowNominal: boolean) => {
+        if (!activeProject || !canManageMembers) return;
+        const projectId = activeProject.id;
+        const prev = member.canSeeNominal ?? true;
+        setMemberError(null);
+        setMemberActionTarget(member.userId);
+        updateMemberInState(projectId, member.userId, (m) => ({ ...m, canSeeNominal: allowNominal }));
+
+        startMutate(async () => {
+            try {
+                const { error: updateErr } = await updateProjectMember(projectId, member.userId, { can_see_nominal: allowNominal });
+                if (updateErr) throw updateErr;
+                await loadProjects(projectId, { silent: true });
+            } catch (err) {
+                const message = err instanceof Error ? err.message : 'Gagal mengubah akses nominal.';
+                setMemberError(message);
+                updateMemberInState(projectId, member.userId, (m) => ({ ...m, canSeeNominal: prev }));
+                await loadProjects(projectId, { silent: true });
+            } finally {
+                setMemberActionTarget(null);
+            }
+        });
+    };
+
     const handleAddExistingMember = async (e: FormEvent) => {
         e.preventDefault();
         if (!activeProject || !canManageMembers) return;
@@ -340,6 +388,60 @@ const AdminMemberManagement = () => {
                                             }}
                                             onBlur={(e) => handleUpdateMemberRate(member, Number(e.target.value) || 0)}
                                         />
+                                    </div>
+                                    <div className="flex flex-col gap-1 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-400">
+                                        <span>Timer</span>
+                                        <div className="flex items-center gap-3 text-[11px] font-medium normal-case text-slate-600 dark:text-slate-300">
+                                            <label className="inline-flex items-center gap-1">
+                                                <input
+                                                    type="radio"
+                                                    name={`timer-${member.userId}`}
+                                                    className="form-radio"
+                                                    checked={member.canUseTimer !== false}
+                                                    disabled={!canManageMembers || busy}
+                                                    onChange={() => handleUpdateTimerAccess(member, true)}
+                                                />
+                                                Bisa start/stop
+                                            </label>
+                                            <label className="inline-flex items-center gap-1">
+                                                <input
+                                                    type="radio"
+                                                    name={`timer-${member.userId}`}
+                                                    className="form-radio"
+                                                    checked={member.canUseTimer === false}
+                                                    disabled={!canManageMembers || busy}
+                                                    onChange={() => handleUpdateTimerAccess(member, false)}
+                                                />
+                                                Tidak bisa
+                                            </label>
+                                        </div>
+                                    </div>
+                                    <div className="flex flex-col gap-1 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:border-slate-700 dark:bg-slate-800/60 dark:text-slate-400">
+                                        <span>Nominal</span>
+                                        <div className="flex items-center gap-3 text-[11px] font-medium normal-case text-slate-600 dark:text-slate-300">
+                                            <label className="inline-flex items-center gap-1">
+                                                <input
+                                                    type="radio"
+                                                    name={`nominal-${member.userId}`}
+                                                    className="form-radio"
+                                                    checked={member.canSeeNominal !== false}
+                                                    disabled={!canManageMembers || busy}
+                                                    onChange={() => handleUpdateNominalAccess(member, true)}
+                                                />
+                                                Bisa lihat
+                                            </label>
+                                            <label className="inline-flex items-center gap-1">
+                                                <input
+                                                    type="radio"
+                                                    name={`nominal-${member.userId}`}
+                                                    className="form-radio"
+                                                    checked={member.canSeeNominal === false}
+                                                    disabled={!canManageMembers || busy}
+                                                    onChange={() => handleUpdateNominalAccess(member, false)}
+                                                />
+                                                Tidak bisa
+                                            </label>
+                                        </div>
                                     </div>
                                     <select
                                         className="form-select h-10 flex-1 min-w-[140px]"

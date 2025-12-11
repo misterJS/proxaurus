@@ -11,6 +11,7 @@ type Props = {
     projectMembers: Member[];
     getTrackedSeconds: (task: BoardTask) => number;
     timerTaskId: string | null;
+    canUseTimer: boolean;
     onEdit: (task: BoardTask) => void;
     onToggleTimer: (taskId: string) => void;
     onDelete: (taskId: string) => void;
@@ -23,6 +24,7 @@ export default function TaskListView({
     projectMembers,
     getTrackedSeconds,
     timerTaskId,
+    canUseTimer,
     onEdit,
     onToggleTimer,
     onDelete,
@@ -96,6 +98,15 @@ export default function TaskListView({
                         {tasks.map((task) => {
                             const isTimerRunning = timerTaskId === task.id;
                             const trackedSeconds = getTrackedSeconds(task);
+                            const timerDisabled = !canUseTimer && !isTimerRunning;
+                            const timerTitle = timerDisabled ? 'Kamu tidak diizinkan start/stop timer' : isTimerRunning ? 'Stop timer' : 'Start timer';
+                            const timerButtonClass = `rounded-lg p-1.5 transition ${
+                                timerDisabled
+                                    ? 'cursor-not-allowed bg-slate-100 text-slate-400 hover:bg-slate-100 dark:bg-slate-700 dark:text-slate-500 dark:hover:bg-slate-700'
+                                    : isTimerRunning
+                                    ? 'bg-rose-100 text-rose-600 hover:bg-rose-200 dark:bg-rose-500/20 dark:text-rose-400'
+                                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-300'
+                            }`;
                             return (
                                 <tr key={task.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
                                     <td className="px-4 py-4">
@@ -135,13 +146,13 @@ export default function TaskListView({
                                     <td className="px-4 py-4">
                                         <div className="flex items-center gap-2">
                                             <button
-                                                onClick={() => onToggleTimer(task.id)}
-                                                className={`rounded-lg p-1.5 transition ${
-                                                    isTimerRunning
-                                                        ? 'bg-rose-100 text-rose-600 hover:bg-rose-200 dark:bg-rose-500/20 dark:text-rose-400'
-                                                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-300'
-                                                }`}
-                                                title={isTimerRunning ? 'Stop timer' : 'Start timer'}
+                                                onClick={() => {
+                                                    if (timerDisabled) return;
+                                                    onToggleTimer(task.id);
+                                                }}
+                                                disabled={timerDisabled}
+                                                className={timerButtonClass}
+                                                title={timerTitle}
                                             >
                                                 {isTimerRunning ? <IconClock className="h-4 w-4" /> : <IconPlayCircle className="h-4 w-4" />}
                                             </button>

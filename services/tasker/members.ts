@@ -14,7 +14,7 @@ export const buildUserInfoMap = (
 };
 
 export const mapMembersByProject = (
-    pm: Array<{ project_id: string; user_id: string; role?: string; is_active?: boolean; hourly_rate?: number | null }>,
+    pm: Array<{ project_id: string; user_id: string; role?: string; is_active?: boolean; hourly_rate?: number | null; can_use_timer?: boolean; can_see_nominal?: boolean }>,
     usersById: Map<string, { fullName: string | null; avatarUrl: string | null; email: string | null }>,
 ): Record<string, Member[]> => {
     const membersByProject: Record<string, Member[]> = {};
@@ -28,6 +28,8 @@ export const mapMembersByProject = (
             role: row.role as Member['role'],
             isActive: row.is_active ?? true,
             hourlyRate: row.hourly_rate ?? null,
+            canUseTimer: row.can_use_timer ?? true,
+            canSeeNominal: row.can_see_nominal ?? true,
         };
         membersByProject[row.project_id] = membersByProject[row.project_id] ? [...membersByProject[row.project_id], member] : [member];
     });

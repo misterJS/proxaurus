@@ -17,6 +17,7 @@ export type TaskCardProps = {
     displayHours: number; // live
     displayMinutes: number; // live
     isLastFlow: boolean;
+    canUseTimer: boolean;
     onEdit: (task: BoardTask) => void;
     onToggleTimer: (taskId: string) => void;
     onDelete: (taskId: string) => void;
@@ -35,7 +36,7 @@ const badgeClassesByPriority = (p: Priority) => {
 };
 
 export default function TaskCard(props: TaskCardProps) {
-    const { task, projectMembers, myRole, timerRunning, totalHours, displayHours, displayMinutes, isLastFlow, onEdit, onToggleTimer, onDelete, onToggleAssignee } = props;
+    const { task, projectMembers, myRole, timerRunning, totalHours, displayHours, displayMinutes, isLastFlow, canUseTimer, onEdit, onToggleTimer, onDelete, onToggleAssignee } = props;
     const dueInfo = formatDue(task.dueDate, { completed: isLastFlow });
 
     const formatTimeAgo = (date: Date): string => {
@@ -54,6 +55,19 @@ export default function TaskCard(props: TaskCardProps) {
 
     const createdWhen = formatTimeAgo(new Date(task.createdAt));
     const canDelete = myRole === 'owner' || myRole === 'admin';
+    const timerButtonDisabled = !canUseTimer && !timerRunning;
+    const timerLabel = timerRunning ? 'Stop timer' : 'Start timer';
+    const timerTitle = timerButtonDisabled ? 'Kamu tidak diizinkan start/stop timer' : timerLabel;
+    const timerMenuClasses = `mt-1 block w-full rounded-lg px-3 py-1.5 text-left ${
+        timerButtonDisabled ? 'cursor-not-allowed text-slate-400' : 'text-primary hover:bg-primary/10 dark:text-primary/80 dark:hover:bg-primary/10'
+    }`;
+    const inlineTimerClasses = `text-xs transition ${
+        timerButtonDisabled ? 'cursor-not-allowed text-slate-400' : timerRunning ? 'text-rose-500 hover:text-rose-600' : 'text-primary hover:text-primary/90'
+    }`;
+    const handleToggleTimer = () => {
+        if (timerButtonDisabled) return;
+        onToggleTimer(task.id);
+    };
 
     return (
         <article
@@ -85,10 +99,12 @@ export default function TaskCard(props: TaskCardProps) {
                         <li>
                             <button
                                 type="button"
-                                className="mt-1 block w-full rounded-lg px-3 py-1.5 text-left text-primary hover:bg-primary/10 dark:text-primary/80 dark:hover:bg-primary/10"
-                                onClick={() => onToggleTimer(task.id)}
+                                className={timerMenuClasses}
+                                onClick={handleToggleTimer}
+                                disabled={timerButtonDisabled}
+                                title={timerTitle}
                             >
-                                {timerRunning ? 'Stop timer' : 'Start timer'}
+                                {timerLabel}
                             </button>
                         </li>
                         <li>
@@ -120,10 +136,12 @@ export default function TaskCard(props: TaskCardProps) {
                     </span>
                     <button
                         type="button"
-                        className={`text-xs transition ${timerRunning ? 'text-rose-500 hover:text-rose-600' : 'text-primary hover:text-primary/90'}`}
-                        onClick={() => onToggleTimer(task.id)}
+                        className={inlineTimerClasses}
+                        onClick={handleToggleTimer}
+                        disabled={timerButtonDisabled}
+                        title={timerTitle}
                     >
-                        {timerRunning ? 'Stop timer' : 'Start timer'}
+                        {timerLabel}
                     </button>
                 </div>
             </div>
