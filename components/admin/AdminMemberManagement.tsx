@@ -47,7 +47,7 @@ const AdminMemberManagement = () => {
                 if (updateErr) throw updateErr;
                 await loadProjects(projectId, { silent: true });
             } catch (err) {
-                const message = err instanceof Error ? err.message : 'Gagal memperbarui status member.';
+                const message = err instanceof Error ? err.message : 'Failed to update member status.';
                 setMemberError(message);
                 updateMemberInState(projectId, member.userId, (m) => ({ ...m, isActive: prevActive }));
                 await loadProjects(projectId, { silent: true });
@@ -72,7 +72,7 @@ const AdminMemberManagement = () => {
                 if (updateErr) throw updateErr;
                 await loadProjects(projectId, { silent: true });
             } catch (err) {
-                const message = err instanceof Error ? err.message : 'Gagal mengubah role member.';
+                const message = err instanceof Error ? err.message : 'Failed to change member role.';
                 setMemberError(message);
                 updateMemberInState(projectId, member.userId, (m) => ({ ...m, role: prevRole }));
                 await loadProjects(projectId, { silent: true });
@@ -87,7 +87,7 @@ const AdminMemberManagement = () => {
         if (member.role === 'owner') return;
         const projectId = activeProject.id;
         const label = member.fullName || member.email || member.userId;
-        if (!window.confirm(`Hapus ${label} dari project ini?`)) return;
+        if (!window.confirm(`Remove ${label} from this project?`)) return;
         setMemberError(null);
         setMemberActionTarget(member.userId);
         removeMemberInState(projectId, member.userId);
@@ -98,7 +98,7 @@ const AdminMemberManagement = () => {
                 if (deleteErr) throw deleteErr;
                 await loadProjects(projectId, { silent: true });
             } catch (err) {
-                const message = err instanceof Error ? err.message : 'Gagal menghapus member.';
+                const message = err instanceof Error ? err.message : 'Failed to delete member.';
                 setMemberError(message);
                 await loadProjects(projectId, { silent: true });
             } finally {
@@ -122,7 +122,7 @@ const AdminMemberManagement = () => {
                 if (updateErr) throw updateErr;
                 await loadProjects(projectId, { silent: true });
             } catch (err) {
-                const message = err instanceof Error ? err.message : 'Gagal mengubah rate member.';
+                const message = err instanceof Error ? err.message : 'Failed to update member rate.';
                 setMemberError(message);
                 updateMemberInState(projectId, member.userId, (m) => ({ ...m, hourlyRate: prevRate }));
                 await loadProjects(projectId, { silent: true });
@@ -146,7 +146,7 @@ const AdminMemberManagement = () => {
                 if (updateErr) throw updateErr;
                 await loadProjects(projectId, { silent: true });
             } catch (err) {
-                const message = err instanceof Error ? err.message : 'Gagal mengubah akses timer.';
+                const message = err instanceof Error ? err.message : 'Failed to update timer access.';
                 setMemberError(message);
                 updateMemberInState(projectId, member.userId, (m) => ({ ...m, canUseTimer: prev }));
                 await loadProjects(projectId, { silent: true });
@@ -170,7 +170,7 @@ const AdminMemberManagement = () => {
                 if (updateErr) throw updateErr;
                 await loadProjects(projectId, { silent: true });
             } catch (err) {
-                const message = err instanceof Error ? err.message : 'Gagal mengubah akses nominal.';
+                const message = err instanceof Error ? err.message : 'Failed to update nominal visibility.';
                 setMemberError(message);
                 updateMemberInState(projectId, member.userId, (m) => ({ ...m, canSeeNominal: prev }));
                 await loadProjects(projectId, { silent: true });
@@ -186,7 +186,7 @@ const AdminMemberManagement = () => {
         const projectId = activeProject.id;
         const email = addEmail.trim().toLowerCase();
         if (!email) {
-            setMemberError('Masukkan email user yang sudah terdaftar.');
+            setMemberError('Enter a registered user email.');
             return;
         }
         setMemberError(null);
@@ -194,19 +194,19 @@ const AdminMemberManagement = () => {
         try {
             const exists = (activeProject.members ?? []).find((m) => m.email?.toLowerCase() === email);
             if (exists) {
-                setMemberError('User sudah menjadi member project ini.');
+                setMemberError('User is already a member of this project.');
                 setAddingExisting(false);
                 return;
             }
             const { data: user, error: userErr } = await findUserByEmail(email);
             if (userErr) throw userErr;
             if (!user?.id) {
-                setMemberError('User belum terdaftar. Gunakan fitur Invite.');
+                setMemberError('User is not registered. Use Invite for unregistered users.');
                 setAddingExisting(false);
                 return;
             }
             if ((activeProject.members ?? []).some((m) => m.userId === user.id)) {
-                setMemberError('User sudah menjadi member project ini.');
+                setMemberError('User is already a member of this project.');
                 setAddingExisting(false);
                 return;
             }
@@ -223,21 +223,21 @@ const AdminMemberManagement = () => {
             setAddRate(50_000);
             setAddRole('member');
         } catch (err) {
-            const message = err instanceof Error ? err.message : 'Gagal menambahkan member.';
+            const message = err instanceof Error ? err.message : 'Failed to add member.';
             setMemberError(message);
         } finally {
             setAddingExisting(false);
         }
     };
 
-    if (userLoading || isLoading) return <div className="flex min-h-[400px] items-center justify-center text-slate-500">Memuat data admin...</div>;
+    if (userLoading || isLoading) return <div className="flex min-h-[400px] items-center justify-center text-slate-500">Loading admin data...</div>;
     if (userError || error) return <div className="rounded-xl border border-rose-200 bg-rose-50 p-6 text-rose-500 dark:border-rose-400/40 dark:bg-rose-500/10">{userError || error}</div>;
 
     if (!projects.length) {
         return (
             <div className="rounded-2xl border border-dashed border-slate-300 bg-white/70 p-6 text-center text-slate-500 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300">
-                <p className="font-semibold">Belum ada project.</p>
-                <p className="text-sm">Buat project terlebih dahulu untuk mengelola member.</p>
+                <p className="font-semibold">No projects yet.</p>
+                <p className="text-sm">Create a project first to manage members.</p>
             </div>
         );
     }
@@ -247,11 +247,11 @@ const AdminMemberManagement = () => {
             <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800">
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div>
-                        <h1 className="text-xl font-semibold text-slate-900 dark:text-white">Admin - Kelola Member</h1>
-                        <p className="text-sm text-slate-500 dark:text-slate-400">Aktif/nonaktif user, ubah role, atau hapus member per project.</p>
+                        <h1 className="text-xl font-semibold text-slate-900 dark:text-white">Admin - Manage Members</h1>
+                        <p className="text-sm text-slate-500 dark:text-slate-400">Activate/deactivate users, change roles, or remove members per project.</p>
                     </div>
                     <div className="flex items-center gap-2">
-                        <label className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Pilih Project</label>
+                        <label className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Select Project</label>
                         <select
                             className="form-select"
                             value={activeProjectId ?? ''}
@@ -271,13 +271,13 @@ const AdminMemberManagement = () => {
                 <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800">
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                         <div>
-                            <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Tambah member yang sudah terdaftar</h2>
-                            <p className="text-sm text-slate-500 dark:text-slate-400">Assign ke project tanpa kirim invite. Untuk user belum sign up tetap gunakan Invite.</p>
+                            <h2 className="text-lg font-semibold text-slate-900 dark:text-white">Add existing registered user</h2>
+                            <p className="text-sm text-slate-500 dark:text-slate-400">Assign to project without sending an invite. Use Invite for users who have not signed up.</p>
                         </div>
                     </div>
                     <form className="mt-4 grid gap-3 md:grid-cols-[2fr_1fr_1fr_auto] md:items-end" onSubmit={handleAddExistingMember}>
                         <label className="grid gap-1 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                            Email user terdaftar
+                            Registered user email
                             <input
                                 type="email"
                                 className="form-input"
@@ -295,7 +295,7 @@ const AdminMemberManagement = () => {
                             </select>
                         </label>
                         <label className="grid gap-1 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
-                            Rate / jam (IDR)
+                            Rate / hour (IDR)
                             <input
                                 type="number"
                                 min={0}
@@ -310,7 +310,7 @@ const AdminMemberManagement = () => {
                             disabled={addingExisting}
                             className="inline-flex items-center justify-center rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60"
                         >
-                            {addingExisting ? 'Menambahkan...' : 'Tambah'}
+                            {addingExisting ? 'Adding...' : 'Add'}
                         </button>
                     </form>
                 </div>
@@ -322,7 +322,7 @@ const AdminMemberManagement = () => {
                         <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Project</p>
                         <p className="text-base font-semibold text-slate-900 dark:text-white">{activeProject?.name}</p>
                         <p className="text-xs text-slate-500 dark:text-slate-400">
-                            Role kamu: {activeProject ? myRoles[activeProject.id] ?? 'member' : 'member'}
+                            Your role: {activeProject ? myRoles[activeProject.id] ?? 'member' : 'member'}
                         </p>
                     </div>
                     <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600 dark:bg-slate-700 dark:text-slate-200">{activeProject?.members?.length ?? 0} member</span>
@@ -336,7 +336,7 @@ const AdminMemberManagement = () => {
 
                 {!canManageMembers ? (
                     <p className="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">
-                        Kamu bukan admin/owner di project ini. Data hanya bisa dilihat.
+                        You are not an admin/owner on this project. Data is read-only.
                     </p>
                 ) : null}
 
@@ -368,7 +368,7 @@ const AdminMemberManagement = () => {
                                                 : 'bg-amber-100 text-amber-700 hover:bg-amber-200 dark:bg-amber-500/10 dark:text-amber-200 dark:hover:bg-amber-500/20'
                                         } ${busy || isOwner ? 'opacity-60' : ''}`}
                                     >
-                                        {isActive ? 'Aktif' : 'Nonaktif'}
+                                        {isActive ? 'Active' : 'Inactive'}
                                     </button>
                                 </div>
 
@@ -401,7 +401,7 @@ const AdminMemberManagement = () => {
                                                     disabled={!canManageMembers || busy}
                                                     onChange={() => handleUpdateTimerAccess(member, true)}
                                                 />
-                                                Bisa start/stop
+                                                Can start/stop
                                             </label>
                                             <label className="inline-flex items-center gap-1">
                                                 <input
@@ -412,7 +412,7 @@ const AdminMemberManagement = () => {
                                                     disabled={!canManageMembers || busy}
                                                     onChange={() => handleUpdateTimerAccess(member, false)}
                                                 />
-                                                Tidak bisa
+                                                Not allowed
                                             </label>
                                         </div>
                                     </div>
@@ -428,7 +428,7 @@ const AdminMemberManagement = () => {
                                                     disabled={!canManageMembers || busy}
                                                     onChange={() => handleUpdateNominalAccess(member, true)}
                                                 />
-                                                Bisa lihat
+                                                Can see
                                             </label>
                                             <label className="inline-flex items-center gap-1">
                                                 <input
@@ -439,7 +439,7 @@ const AdminMemberManagement = () => {
                                                     disabled={!canManageMembers || busy}
                                                     onChange={() => handleUpdateNominalAccess(member, false)}
                                                 />
-                                                Tidak bisa
+                                                Not allowed
                                             </label>
                                         </div>
                                     </div>
@@ -461,7 +461,7 @@ const AdminMemberManagement = () => {
                                         onClick={() => handleDeleteMember(member)}
                                         className="rounded-lg border border-rose-200 px-3 py-2 text-xs font-semibold text-rose-600 transition hover:bg-rose-50 disabled:opacity-50 dark:border-rose-500/40 dark:text-rose-200 dark:hover:bg-rose-500/10"
                                     >
-                                        Hapus
+                                        Delete
                                     </button>
                                     <span
                                         className={`rounded-full px-2 py-1 text-[11px] font-semibold uppercase ${
@@ -478,7 +478,7 @@ const AdminMemberManagement = () => {
                             </div>
                         );
                     })}
-                    {!activeProject?.members?.length ? <p className="text-center text-sm text-slate-400 dark:text-slate-500">Belum ada member.</p> : null}
+                    {!activeProject?.members?.length ? <p className="text-center text-sm text-slate-400 dark:text-slate-500">No members yet.</p> : null}
                 </div>
             </div>
         </div>

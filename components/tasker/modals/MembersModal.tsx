@@ -4,7 +4,7 @@ import ModalShell from '../primitive/ModalShell';
 
 export default function MembersModal({ project, onClose }: { project: BoardProject; onClose: () => void }) {
     return (
-        <ModalShell title={`Members · ${project.name}`} onClose={onClose} maxWidth="max-w-lg" zIndexClass="z-[80]">
+        <ModalShell title={`Members - ${project.name}`} onClose={onClose} maxWidth="max-w-lg" zIndexClass="z-[80]">
             <div className="max-h-[60vh] space-y-2 overflow-auto">
                 {(project.members ?? []).map((m) => (
                     <div key={m.userId} className="flex items-center rounded-xl border border-slate-100 p-3 dark:border-slate-700">
@@ -18,13 +18,19 @@ export default function MembersModal({ project, onClose }: { project: BoardProje
                             {m.email ? <p className="text-xs text-slate-400">{m.email}</p> : null}
                         </div>
                         <span
-                            className={`rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase ${m.role === 'owner' ? 'bg-violet-100 text-violet-600 dark:bg-violet-500/10 dark:text-violet-300' : m.role === 'admin' ? 'bg-sky-100 text-sky-600 dark:bg-sky-500/10 dark:text-sky-300' : 'bg-slate-100 text-slate-600 dark:bg-slate-700/60 dark:text-slate-300'}`}
+                            className={`rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase ${
+                                m.role === 'owner'
+                                    ? 'bg-violet-100 text-violet-600 dark:bg-violet-500/10 dark:text-violet-300'
+                                    : m.role === 'admin'
+                                    ? 'bg-sky-100 text-sky-600 dark:bg-sky-500/10 dark:text-sky-300'
+                                    : 'bg-slate-100 text-slate-600 dark:bg-slate-700/60 dark:text-slate-300'
+                            }`}
                         >
                             {m.role}
                         </span>
                     </div>
                 ))}
-                {!project.members?.length ? <p className="text-center text-sm text-slate-400">Belum ada member.</p> : null}
+                {!project.members?.length ? <p className="text-center text-sm text-slate-400">No members yet.</p> : null}
             </div>
         </ModalShell>
     );

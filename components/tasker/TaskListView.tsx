@@ -53,11 +53,11 @@ export default function TaskListView({
     const getPriorityLabel = (priority: string) => {
         switch (priority) {
             case 'high':
-                return 'Tinggi';
+                return 'High';
             case 'medium':
-                return 'Sedang';
+                return 'Medium';
             case 'low':
-                return 'Rendah';
+                return 'Low';
             default:
                 return priority;
         }
@@ -70,11 +70,11 @@ export default function TaskListView({
         const diffHours = Math.floor(diffMs / 3600000);
         const diffDays = Math.floor(diffMs / 86400000);
 
-        if (diffMins < 1) return 'baru saja';
-        if (diffMins < 60) return `${diffMins} menit yang lalu`;
-        if (diffHours < 24) return `${diffHours} jam yang lalu`;
-        if (diffDays < 30) return `${diffDays} hari yang lalu`;
-        return date.toLocaleDateString('id-ID');
+        if (diffMins < 1) return 'just now';
+        if (diffMins < 60) return `${diffMins} minutes ago`;
+        if (diffHours < 24) return `${diffHours} hours ago`;
+        if (diffDays < 30) return `${diffDays} days ago`;
+        return date.toLocaleDateString('en-US');
     };
 
     if (tasks.length === 0) return null;
@@ -87,11 +87,11 @@ export default function TaskListView({
                     <thead>
                         <tr className="border-b border-slate-200 dark:border-slate-700">
                             <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Task</th>
-                            <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Prioritas</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Priority</th>
                             <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Assignees</th>
-                            <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Waktu</th>
-                            <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Dibuat</th>
-                            <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Aksi</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Time</th>
+                            <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Created</th>
+                            <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Actions</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
@@ -99,7 +99,7 @@ export default function TaskListView({
                             const isTimerRunning = timerTaskId === task.id;
                             const trackedSeconds = getTrackedSeconds(task);
                             const timerDisabled = !canUseTimer && !isTimerRunning;
-                            const timerTitle = timerDisabled ? 'Kamu tidak diizinkan start/stop timer' : isTimerRunning ? 'Stop timer' : 'Start timer';
+                            const timerTitle = timerDisabled ? 'You are not allowed to start/stop the timer' : isTimerRunning ? 'Stop timer' : 'Start timer';
                             const timerButtonClass = `rounded-lg p-1.5 transition ${
                                 timerDisabled
                                     ? 'cursor-not-allowed bg-slate-100 text-slate-400 hover:bg-slate-100 dark:bg-slate-700 dark:text-slate-500 dark:hover:bg-slate-700'
@@ -139,7 +139,7 @@ export default function TaskListView({
                                                 </div>
                                             )}
                                             {task.assignees.length === 0 && (
-                                                <span className="text-sm text-slate-400 dark:text-slate-500">Tidak ada</span>
+                                                <span className="text-sm text-slate-400 dark:text-slate-500">None</span>
                                             )}
                                         </div>
                                     </td>

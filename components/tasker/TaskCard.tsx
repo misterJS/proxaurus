@@ -46,18 +46,18 @@ export default function TaskCard(props: TaskCardProps) {
         const diffHours = Math.floor(diffMs / 3600000);
         const diffDays = Math.floor(diffMs / 86400000);
 
-        if (diffMins < 1) return 'baru saja';
-        if (diffMins < 60) return `${diffMins} menit yang lalu`;
-        if (diffHours < 24) return `${diffHours} jam yang lalu`;
-        if (diffDays < 30) return `${diffDays} hari yang lalu`;
-        return date.toLocaleDateString('id-ID');
+        if (diffMins < 1) return 'just now';
+        if (diffMins < 60) return `${diffMins} minutes ago`;
+        if (diffHours < 24) return `${diffHours} hours ago`;
+        if (diffDays < 30) return `${diffDays} days ago`;
+        return date.toLocaleDateString('en-US');
     };
 
     const createdWhen = formatTimeAgo(new Date(task.createdAt));
     const canDelete = myRole === 'owner' || myRole === 'admin';
     const timerButtonDisabled = !canUseTimer && !timerRunning;
     const timerLabel = timerRunning ? 'Stop timer' : 'Start timer';
-    const timerTitle = timerButtonDisabled ? 'Kamu tidak diizinkan start/stop timer' : timerLabel;
+    const timerTitle = timerButtonDisabled ? 'You are not allowed to start/stop the timer' : timerLabel;
     const timerMenuClasses = `mt-1 block w-full rounded-lg px-3 py-1.5 text-left ${
         timerButtonDisabled ? 'cursor-not-allowed text-slate-400' : 'text-primary hover:bg-primary/10 dark:text-primary/80 dark:hover:bg-primary/10'
     }`;
@@ -78,7 +78,7 @@ export default function TaskCard(props: TaskCardProps) {
                 <div>
                     <span className={`inline-block rounded-full px-2 py-0.5 text-[11px] font-semibold uppercase ${badgeClassesByPriority(task.priority)}`}>{task.priority}</span>
                     <h3 className="mt-1 text-base font-semibold text-slate-900 dark:text-white">{task.title}</h3>
-                    <p className="text-[11px] text-slate-400 dark:text-slate-500">Dibuat {createdWhen}</p>
+                    <p className="text-[11px] text-slate-400 dark:text-slate-500">Created {createdWhen}</p>
                     {task.description ? (
                         <div className="text-xs text-slate-500 dark:text-slate-400 whitespace-pre-wrap break-words [overflow-wrap:anywhere]">
                             <ReactMarkdown
@@ -114,7 +114,7 @@ export default function TaskCard(props: TaskCardProps) {
                                 className={`mt-1 block w-full rounded-lg px-3 py-1.5 text-left ${canDelete ? 'text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10' : 'text-slate-400 cursor-not-allowed opacity-60'}`}
                                 onClick={() => canDelete && onDelete(task.id)}
                             >
-                                Hapus task
+                                Delete task
                             </button>
                         </li>
                     </ul>
@@ -201,7 +201,7 @@ export default function TaskCard(props: TaskCardProps) {
                                 </li>
                             );
                         })}
-                        {!projectMembers.length ? <li className="px-2 py-1.5 text-xs text-slate-400">Belum ada member</li> : null}
+                        {!projectMembers.length ? <li className="px-2 py-1.5 text-xs text-slate-400">No members yet</li> : null}
                     </ul>
                 </Dropdown>
             </div>

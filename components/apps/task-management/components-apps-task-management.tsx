@@ -222,7 +222,7 @@ export default function ComponentsAppsTaskManagement() {
         }
     }, [canUseTimer, activeProjectId]);
 
-    if (userLoading || isLoading) return <div className="flex min-h-[400px] items-center justify-center text-slate-500">Memuat Task Management...</div>;
+    if (userLoading || isLoading) return <div className="flex min-h-[400px] items-center justify-center text-slate-500">Loading Task Management...</div>;
     if (userError || error) return <div className="rounded-xl border border-rose-200 bg-rose-50 p-6 text-rose-500 dark:border-rose-400/40 dark:bg-rose-500/10">{userError || error}</div>;
 
     const handleSort = async (flowId: string, nextTasks: BoardTask[]) => {
@@ -243,7 +243,7 @@ export default function ComponentsAppsTaskManagement() {
 
     const toggleTimer = (taskId: string) => {
         if (!canUseTimer && timer.taskId !== taskId) {
-            setTimerError('Kamu tidak diizinkan start/stop timer pada project ini.');
+            setTimerError('You are not allowed to start/stop the timer in this project.');
             return;
         }
         setTimerError(null);
@@ -325,12 +325,12 @@ export default function ComponentsAppsTaskManagement() {
                         <div className="flex flex-wrap items-center gap-3">
                             <h1 className="text-2xl font-semibold text-slate-900 dark:text-white">Task Management</h1>
                         </div>
-                        <p className="text-sm text-slate-500 dark:text-slate-400">Kelola projects, flows, tasks, dan member.</p>
+                        <p className="text-sm text-slate-500 dark:text-slate-400">Manage projects, flows, tasks, and members.</p>
                     </div>
                     <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-col lg:flex-row lg:flex-wrap lg:justify-end lg:gap-3">
-                        <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center sm:justify-end">
-                            <div className="inline-flex w-full items-center justify-center rounded-xl border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 shadow-sm dark:border-slate-700 dark:text-slate-300 sm:w-auto">{summary.tasks} tasks</div>
-                            <div className="flex w-full items-stretch gap-1 rounded-xl border border-slate-200 bg-white p-1 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:w-auto">
+                            <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center sm:justify-end">
+                                <div className="inline-flex w-full items-center justify-center rounded-xl border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 shadow-sm dark:border-slate-700 dark:text-slate-300 sm:w-auto">{summary.tasks} tasks</div>
+                                <div className="flex w-full items-stretch gap-1 rounded-xl border border-slate-200 bg-white p-1 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:w-auto">
                                 <button
                                     type="button"
                                     onClick={() => setViewMode('board')}
@@ -359,15 +359,15 @@ export default function ComponentsAppsTaskManagement() {
                                 </button>
                             </div>
                         </div>
-                        <div className="sm:hidden">
-                            <button
-                                type="button"
-                                onClick={() => setShowActionsMobile((v) => !v)}
-                                className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-600 shadow-sm transition hover:border-primary/40 hover:text-primary dark:border-slate-600 dark:text-slate-300"
-                            >
-                                {showActionsMobile ? 'Sembunyikan aksi' : 'Tampilkan aksi'}
-                            </button>
-                        </div>
+                            <div className="sm:hidden">
+                                <button
+                                    type="button"
+                                    onClick={() => setShowActionsMobile((v) => !v)}
+                                    className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-600 shadow-sm transition hover:border-primary/40 hover:text-primary dark:border-slate-600 dark:text-slate-300"
+                                >
+                                    {showActionsMobile ? 'Hide actions' : 'Show actions'}
+                                </button>
+                            </div>
                         <div
                             className={`grid w-full grid-cols-2 gap-2 sm:w-auto sm:grid-cols-3 lg:flex lg:flex-wrap lg:justify-end lg:gap-3 ${
                                 showActionsMobile ? '' : 'hidden sm:grid'
@@ -380,14 +380,14 @@ export default function ComponentsAppsTaskManagement() {
                                 className="col-span-2 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:border-primary/40 hover:text-primary dark:border-slate-600 dark:text-slate-300 disabled:cursor-not-allowed disabled:opacity-60 sm:col-span-1 sm:w-auto"
                                 title={
                                     !activeProject
-                                        ? 'Pilih project aktif'
+                                        ? 'Select an active project'
                                         : activeProject.archived
-                                        ? 'Project terarsip tidak bisa di-export'
+                                        ? 'Archived projects cannot be exported'
                                         : !canSeeNominal
-                                        ? 'Akses nominal dimatikan untuk akunmu'
+                                        ? 'Nominal visibility is disabled for your account'
                                         : !canExport
-                                        ? 'Hanya admin/owner yang dapat export'
-                                        : 'Export laporan'
+                                        ? 'Only admin/owner can export'
+                                        : 'Export report'
                                 }
                             >
                                 Export
@@ -401,7 +401,7 @@ export default function ComponentsAppsTaskManagement() {
                                         ? 'border border-amber-200 text-amber-700 hover:bg-amber-50 dark:border-amber-500/40 dark:text-amber-200 dark:hover:bg-amber-500/10'
                                         : 'border border-slate-300 text-slate-600 hover:border-primary/40 hover:text-primary dark:border-slate-600 dark:text-slate-300'
                                 } disabled:cursor-not-allowed disabled:opacity-60`}
-                                title={activeProject?.archived ? 'Pulihkan project ke daftar aktif' : 'Arsipkan project ini'}
+                                title={activeProject?.archived ? 'Restore project to active list' : 'Archive this project'}
                             >
                                 {activeProject?.archived ? <IconRestore className="h-4 w-4" /> : <IconArchive className="h-4 w-4" />}
                                 {activeProject?.archived ? 'Unarchive' : 'Archive'}
@@ -431,7 +431,7 @@ export default function ComponentsAppsTaskManagement() {
                                 className="col-span-2 inline-flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 px-4 py-2 text-sm font-semibold text-slate-500 transition hover:border-primary/40 hover:text-primary dark:border-slate-600 dark:text-slate-400 disabled:cursor-not-allowed disabled:opacity-60 sm:col-span-1 sm:w-auto"
                             >
                                 <IconPlus className="h-4 w-4" />
-                                Flow baru
+                                New flow
                             </button>
                             <button
                                 type="button"
@@ -440,7 +440,7 @@ export default function ComponentsAppsTaskManagement() {
                                 className="col-span-2 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-primary/25 transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-60 sm:col-span-1 sm:w-auto"
                             >
                                 <IconPlus className="h-5 w-5" />
-                                Task baru
+                                New task
                             </button>
                         </div>
                     </div>
@@ -460,14 +460,14 @@ export default function ComponentsAppsTaskManagement() {
                         <div className="flex items-center justify-between gap-3">
                             <div>
                                 <p className="text-sm font-semibold">Archived Projects ({archivedProjects.length})</p>
-                                <p className="text-xs text-amber-700/80 dark:text-amber-200/80">Restore untuk munculkan lagi di dashboard & export.</p>
+                                <p className="text-xs text-amber-700/80 dark:text-amber-200/80">Restore to show them again in the dashboard and export.</p>
                             </div>
                             <button
                                 type="button"
                                 onClick={() => setShowArchivedList((v) => !v)}
                                 className="rounded-md px-3 py-1 text-xs font-semibold transition hover:bg-amber-100/60 dark:hover:bg-amber-500/20"
                             >
-                                {showArchivedList ? 'Sembunyikan' : 'Lihat daftar'}
+                                {showArchivedList ? 'Hide' : 'Show list'}
                             </button>
                         </div>
                         {showArchivedList ? (
@@ -503,12 +503,12 @@ export default function ComponentsAppsTaskManagement() {
                 <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800">
                     <div className="flex items-center justify-between sm:hidden">
                         <div className="flex flex-col">
-                            <span className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Nominal bulan ini</span>
+                            <span className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">This month&apos;s nominal</span>
                             <span className="text-lg font-semibold text-slate-800 dark:text-slate-50">
-                                {canSeeNominal ? formatCurrencyIdr(monthlySummary.nominal) : 'Nominal disembunyikan'}
+                                {canSeeNominal ? formatCurrencyIdr(monthlySummary.nominal) : 'Nominal hidden'}
                             </span>
                             <span className="text-xs text-slate-500 dark:text-slate-400">
-                                {monthlySummary.tasks} task | {(monthlySummary.seconds / 3600).toFixed(1)} jam
+                                {monthlySummary.tasks} tasks | {(monthlySummary.seconds / 3600).toFixed(1)} hours
                             </span>
                         </div>
                         <button
@@ -516,13 +516,13 @@ export default function ComponentsAppsTaskManagement() {
                             onClick={() => setShowFilterMobile((v) => !v)}
                             className="rounded-md border border-slate-200 px-3 py-1 text-xs font-semibold text-slate-600 transition hover:border-primary/40 hover:text-primary dark:border-slate-700 dark:text-slate-200"
                         >
-                            {showFilterMobile ? 'Sembunyikan' : 'Filter'}
+                            {showFilterMobile ? 'Hide' : 'Filter'}
                         </button>
                     </div>
                     <div className={`${showFilterMobile ? 'block' : 'hidden'} sm:block`}>
                         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
                             <label className="space-y-2 text-sm font-medium text-slate-700 dark:text-slate-200">
-                                <span className="block text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Bulan</span>
+                                <span className="block text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Month</span>
                                 <input
                                     type="month"
                                     value={selectedMonth}
@@ -537,8 +537,8 @@ export default function ComponentsAppsTaskManagement() {
                                     onChange={(e) => setSelectedAssignee(e.target.value)}
                                     className="form-select w-full"
                                 >
-                                    <option value="all">Semua user</option>
-                                    <option value="unassigned">Tanpa assignee</option>
+                                    <option value="all">All users</option>
+                                    <option value="unassigned">Unassigned</option>
                                     {(activeProject?.members ?? []).map((m) => (
                                         <option key={m.userId} value={m.userId}>
                                             {m.fullName || m.email || m.userId}
@@ -547,7 +547,7 @@ export default function ComponentsAppsTaskManagement() {
                                 </select>
                             </label>
                             <label className="space-y-2 text-sm font-medium text-slate-700 dark:text-slate-200">
-                                <span className="block text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Tarif / jam (IDR)</span>
+                                <span className="block text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Rate / hour (IDR)</span>
                                 <input
                                     type="number"
                                     min={0}
@@ -557,12 +557,12 @@ export default function ComponentsAppsTaskManagement() {
                                 />
                             </label>
                             <div className="hidden flex-col justify-center rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-slate-700 shadow-inner sm:flex dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100">
-                                <span className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">Nominal bulan ini</span>
+                                <span className="text-xs uppercase tracking-wide text-slate-500 dark:text-slate-400">This month&apos;s nominal</span>
                                 <span className="text-lg font-semibold">
-                                    {canSeeNominal ? formatCurrencyIdr(monthlySummary.nominal) : 'Nominal disembunyikan'}
+                                    {canSeeNominal ? formatCurrencyIdr(monthlySummary.nominal) : 'Nominal hidden'}
                                 </span>
                                 <span className="text-xs text-slate-500 dark:text-slate-400">
-                                    {monthlySummary.tasks} task | {(monthlySummary.seconds / 3600).toFixed(1)} jam
+                                    {monthlySummary.tasks} tasks | {(monthlySummary.seconds / 3600).toFixed(1)} hours
                                 </span>
                             </div>
                         </div>
@@ -645,7 +645,7 @@ export default function ComponentsAppsTaskManagement() {
                     )
                 ) : (
                     <div className="flex min-h-[200px] flex-col items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-white/70 p-8 text-center text-slate-500 dark:border-slate-600 dark:bg-[#0f172a] dark:text-slate-400">
-                        <p className="text-sm font-medium">Belum ada flow. Buat flow baru untuk mulai menambahkan task.</p>
+                        <p className="text-sm font-medium">No flows yet. Create a new flow to start adding tasks.</p>
                     </div>
                 )}
             </div>
